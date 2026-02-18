@@ -206,28 +206,30 @@
         <h1>My Queue History</h1>
         
         <!-- Statistics Cards -->
-        <!-- Total visits card -->
-        <div class="stat-card">
-            <div class="stat-value" id="total-visits">0</div>
-            <div class="stat-label">Total Visits</div>
-        </div>
+        <div class="history-stats">
+            <!-- Total visits card -->
+            <div class="stat-card">
+                <div class="stat-value" id="total-visits">0</div>
+                <div class="stat-label">Total Visits</div>
+            </div>
 
-        <!-- Average wait time card -->
-        <div class="stat-card">
-            <div class="stat-value" id="avg-wait">0</div>
-            <div class="stat-label">Avg. Wait (min)</div>
-        </div>
+            <!-- Average wait time card -->
+            <div class="stat-card">
+                <div class="stat-value" id="avg-wait">0</div>
+                <div class="stat-label">Avg. Wait (min)</div>
+            </div>
 
-        <!-- Completed visits card -->
-         <div class="stat-card">
-            <div class="stat-value" id="completed-visits">0</div>
-            <div class="stat-label">Completed</div>
-         </div>
+            <!-- Completed visits card -->
+            <div class="stat-card">
+                <div class="stat-value" id="completed-visits">0</div>
+                <div class="stat-label">Completed</div>
+            </div>
 
-        <!-- Left early card -->
-        <div class="stat-card">
-            <div class="stat-value" id="left-early">0</div>
-            <div class="stat-label">Left Early</div>
+            <!-- Left early card -->
+            <div class="stat-card">
+                <div class="stat-value" id="left-early">0</div>
+                <div class="stat-label">Left Early</div>
+            </div>
         </div>
 
         <!-- Filters -->
@@ -259,8 +261,8 @@
     
                 <!-- Admin clear history button (hidden by default) -->
                 <button onclick="clearAllHistory()" class="clear-history-btn" id="clear-history-btn" style="display: none;">Clear All History</button>
+            </div>
         </div>
-
         <div class="card">
             <div class="card-title">Queue History</div>
             <div class="table-container">
@@ -322,7 +324,41 @@
             // Populate date inputs with default values
             document.getElementById('date-to').valueAsDate = today;
             document.getElementById('date-from').valueAsDate = thirtyDaysAgo;
+
+            loadHistory(user);
+
+            renderHistoryTable(getUserHistory(user.email));
+
+            // Show clear history button only for admin users
+            if(user.role === "admin") {
+                document.getElementById('clear-history-btn').style.display = 'block';
+            }
+
+            loadHistory(user);
         });
+
+        function clearAllHistory() {
+            // Get current user
+            const user = JSON.parse(localStorage.getItem(CURRENT_USER_KEY));
+
+            // double-check admin status for security
+            if (user.role !== 'admin') {
+                showToast('Only admins can clear history', 'error');
+                return;
+            }
+
+            // Show confirmation dialog
+            if (confirm('Are you sure you want to clear ALL history? This cannot be undone.')) {
+                // Call script.js function to clear history
+                clearUserHistory(user.email);
+
+                // Reload history to show empty state
+                loadHistory(user);
+
+                //Show success message
+                showToast('History cleared successfully', 'success');
+            }
+        }
 
         function loadHistory(user) {
             // Get user's complete history from script.js function
@@ -389,8 +425,7 @@
             document.getElementById('completed-visits').textContent = completedVisits;
             document.getElementById('left-early').textContent = leftEarly;
         }
-    </script>
-    <script>
+
         function renderHistoryTable(history) {
             const tbody = document.getElementById('history-body');
 
@@ -431,6 +466,30 @@
                         </tr>
                     `;
                 }).join(''); // Join array of HTML strings
+        }
+
+        function applyFilters() {
+            // Get current user from localStorage
+            const user = JSON.parse(localStorage.getItem(CURRENT_USER_KEY));
+            // Reload history with new filters
+            loadHistory(user);
+        }
+
+        function clearFilters() {
+            // Reset dropdowns to default (all) option
+            document.getElementById('status-filter').value = '';
+            document.getElementById('service-filter').value = '';
+            
+            // Reset date range to last 30 days
+            const today = new Date();
+            const thirtyDaysAgo = new Date();
+            thirtyDaysAgo.setDate(today.getDate() - 30);
+            
+            document.getElementById('date-to').valueAsDate = today;
+            document.getElementById('date-from').valueAsDate = thirtyDaysAgo;
+            
+            // Apply the reset filters
+            applyFilters();
         }
     </script>
 </body>
