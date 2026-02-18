@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>QueueSmart Tutor - My History</title>
+    <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+    <header class="main-header">
+        <div class="logo">QueueSmart Tutor</div>
+        <nav class="nav-links">
+            <a href="dashboard.html" class="nav-link">Dashboard</a>
+            <a href="join-queue.html" class="nav-link">Join Queue</a>
+            <a href="queue-status.html" class="nav-link">My Queue</a>
+            <a href="user-history.html" class="nav-link" style="color: var(--color-accent); font-weight: 700;">History</a>            
+        </nav>
+        <div class="user-section">
+            <span id="user-email"></span>
+            <span id="role-badge" class="role-badge"></span>
+            <button onclick="logout()" class="logout-btn">Logout</button>
+        </div>
+    </header>
+
+    <div class="container-full">
+        <h1>My Queue History</h1>
+    </div>
+
+    <script src="script.js"></script>
+    <script>
+        // Basic authentication check
+        document.addEventListener('DOMContentLoaded', function() {
+            // Verify user is logged in, redirect to login if not
+            const user = checkAuth();
+            if (!user) return;
+
+            // Display user information in header
+            document.getElementById('user-email').textContent = user.email;
+
+            // Set role badge with appropriate styling
+            const badge = document.getElementById('role-badge');
+            badge.textContent = user.role === 'admin' ? 'ADMIN' : 'STUDENT';
+            badge.className = `role-badge ${user.role === 'admin' ? 'role-admin' : 'role-user'}`;
+        });
+    </script>
+</body>
+</html>
