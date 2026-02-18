@@ -212,6 +212,10 @@ function addToQueue(serviceId, userEmail) {
 
 function leaveQueue(serviceId, userEmail) {
   if (!queues[serviceId]) return;
+
+  // Find the user's entry before removing it from queue to capture join time
+  const entry = queues[serviceId].find(q => q.email === userEmail);
+
   queues[serviceId] = queues[serviceId].filter(q => q.email !== userEmail);
   saveData();
   showToast('You left the queue', 'info');
