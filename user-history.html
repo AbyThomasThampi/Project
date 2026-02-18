@@ -369,6 +369,26 @@
             return true; // Entry passed all filters
             });
         }
+
+        function updateStats(allHistory, filteredHistory) {
+            // Calculate metrics from filtered history
+            const totalVisits = filteredHistory.length;
+            const completedVisits = filteredHistory.filter(h => 
+                h.status === 'completed' || h.status === 'served'
+            ).length;
+            const leftEarly = filteredHistory.filter(h => h.status === 'left').length;
+            
+            // Calculate average wait time (rounded to nearest minute)
+            const avgWait = filteredHistory.length > 0
+                ? Math.round(filteredHistory.reduce((sum, h) => sum + (h.waitTimeMinutes || 0), 0) / filteredHistory.length)
+                : 0;
+
+            // Update DOM elements with calculated values
+            document.getElementById('total-visits').textContent = totalVisits;
+            document.getElementById('avg-wait').textContent = avgWait;
+            document.getElementById('completed-visits').textContent = completedVisits;
+            document.getElementById('left-early').textContent = leftEarly;
+        }
     </script>
 </body>
 </html>
