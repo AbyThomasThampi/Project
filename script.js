@@ -35,12 +35,9 @@ function loadData() {
   saveData();
 }
 
+
 function recordQueueCompletion(serviceId, userEmail, joinedAt, status = 'completed')
 {
-  /**
-   Records a completed queue entry to user history
-   */
-
   // Get existing history form localStorage or create empty array
   const history = JSON.parse(localStorage.getItem(QUEUE_HISTORY_KEY)) || [];
   
@@ -68,6 +65,39 @@ function recordQueueCompletion(serviceId, userEmail, joinedAt, status = 'complet
   localStorage.setItem(QUEUE_HISTORY_KEY, JSON.stringify(history));
 
   return entry;   // for debugging purposes
+}
+
+function getUserHistory(userEmail, filter = {}) {
+  // Get all history from localStorage or empty array if none exists
+  const history = JSON.parse(localStorage.getItem(QUEUE_HISTORY_KEY)) || [];
+
+  // First, filter by user email to only get this user's entries
+  let filtered = history.filter(entry => entry.userEmail === userEmail);
+
+  // Apply additional filters if they were provided
+  // Filter by status (completed, served, left)
+  if (filter.status) {
+    filtered = filtered.filter(entry => entry.status === filter.status);
+  }
+
+  // Filter by specific service
+  if (filter.serviceId) {
+    filtered = filtered.filter(entry => entry.serviceId === filter.serviceId);
+  }
+  
+  // filter by date range - start date
+  if (filter.startDate) {
+    filtered = filtered.filter(entry => new Date(entry.completedAt) >= new Date(filter.startDate));
+  }
+
+  // Filter by date range - end date
+  if (filter.endDate) {
+    filtered = filtered.filter(entry => new Date(entry.completedAt) <= new Date(filter.endDate));
+  }
+
+  // Sort by most recent first (newest at the top)
+  // This uses b-a for descending order (newest first)
+  return filtered.sort((a, b) => new Date(b.completedAt) - new Date(a.completedAt));
 }
 
 function saveData() {
