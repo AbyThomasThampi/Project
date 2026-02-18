@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -183,4 +184,191 @@
 });
 </script>
 </body>
+=======
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>QueueSmart Tutor – Manage Services</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="main-header">
+    <div class="logo">QueueSmart Tutor <span style="font-size:0.9rem;color:#ef4444">(ADMIN)</span></div>
+    <nav class="nav-links">
+      <a href="admin-dashboard.html" class="nav-link">Dashboard</a>
+      <a href="admin-services.html" class="nav-link">Services</a>
+      <a href="admin-queue-manage.html" class="nav-link">Queue Management</a>
+    </nav>
+    <div class="user-section">
+      <span id="user-email"></span>
+      <span class="role-badge role-admin">ADMIN</span>
+      <button onclick="logout()" class="logout-btn">Logout</button>
+    </div>
+  </header>
+
+  <div class="container-full">
+    <div class="card">
+      <div class="card-title">Service Management</div>
+      
+      <form id="service-form">
+        <input type="hidden" id="edit-id">
+        <div class="input-group">
+          <input type="text" id="name" class="input-field" placeholder=" " required maxlength="100">
+          <label class="floating-label">Service Name</label>
+        </div>
+        <div class="input-group">
+          <textarea id="description" class="input-field" style="height:80px;resize:vertical" required></textarea>
+          <label class="floating-label">Description</label>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem">
+          <div class="input-group">
+            <input type="number" id="duration" class="input-field" placeholder=" " min="5" required>
+            <label class="floating-label">Expected Duration (minutes)</label>
+          </div>
+          <div class="input-group">
+            <select id="priority" class="input-field">
+              <option value="low">Low</option>
+              <option value="medium" selected>Medium</option>
+              <option value="high">High</option>
+            </select>
+            <label class="floating-label">Priority Level</label>
+          </div>
+        </div>
+        <button type="submit" class="form-btn form-btn--submit" style="margin-top:1rem">Add / Update Service</button>
+      </form>
+    </div>
+
+    <div class="card">
+      <div class="card-title">All Services</div>
+      <div class="table-container">
+        <table id="services-table">
+          <thead>
+            <tr><th>Name</th><th>Description</th><th>Duration</th><th>Priority</th><th>Actions</th></tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <script src="script.js"></script>
+ <script>
+  document.addEventListener('DOMContentLoaded', function () 
+{
+  const user = checkAuth('admin');
+  if (!user) return;
+
+  document.getElementById('user-email').textContent = user.email;
+
+  const form = document.getElementById('service-form');
+  let editingId = null;   // renamed to avoid confusion with global editMode
+
+  function renderServicesTable() {
+    const tbody = document.querySelector('#services-table tbody');
+    tbody.innerHTML = '';
+    
+    if (services.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:2rem;color:#6b7280">No services yet</td></tr>';
+      return;
+    }
+
+    services.forEach(s => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td><strong>${s.name}</strong></td>
+        <td>${s.description.substring(0, 60)}${s.description.length > 60 ? '...' : ''}</td>
+        <td>${s.expectedDuration} min</td>
+        <td style="text-transform:capitalize">${s.priority}</td>
+        <td>
+          <button onclick="editService(${s.id})" class="btn-warning action-btn">Edit</button>
+          <button onclick="deleteService(${s.id})" class="btn-danger action-btn">Delete</button>
+        </td>
+      `;
+      tbody.appendChild(tr);
+    });
+  }
+
+  window.editService = function(id) {
+    const service = services.find(s => s.id === id);
+    if (!service) return showToast('Service not found', 'error');
+
+    editingId = id;
+    document.getElementById('name').value = service.name;
+    document.getElementById('description').value = service.description;
+    document.getElementById('duration').value = service.expectedDuration;
+    document.getElementById('priority').value = service.priority;
+    
+    form.querySelector('button[type="submit"]').textContent = 'Update Service';
+  };
+
+  window.deleteService = function(id) {
+    if (!confirm('Delete this service and its queue?')) return;
+    
+    services = services.filter(s => s.id !== id);
+    delete queues[id];
+    saveData();
+    renderServicesTable();
+    showToast('Service deleted', 'success');
+  };
+
+  form.addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const name        = document.getElementById('name').value.trim();
+    const description = document.getElementById('description').value.trim();
+    const durationStr = document.getElementById('duration').value.trim();
+    const priority    = document.getElementById('priority').value;
+
+    if (!name || !description || !durationStr) {
+      showToast('Please fill all required fields', 'error');
+      return;
+    }
+
+    const duration = parseInt(durationStr, 10);
+    if (isNaN(duration) || duration < 5) {
+      showToast('Duration must be a number ≥ 5 minutes', 'error');
+      return;
+    }
+
+    if (editingId !== null) {
+      // Update existing
+      const service = services.find(s => s.id === editingId);
+      if (service) {
+        service.name = name;
+        service.description = description;
+        service.expectedDuration = duration;
+        service.priority = priority;
+        showToast('Service updated successfully', 'success');
+      }
+    } else {
+      // Create new
+      const maxId = services.length > 0 ? Math.max(...services.map(s => s.id)) : 0;
+      services.push({
+        id: maxId + 1,
+        name,
+        description,
+        expectedDuration: duration,
+        priority
+      });
+      queues[maxId + 1] = []; // initialize empty queue
+      showToast('Service created successfully', 'success');
+    }
+
+    saveData();
+    renderServicesTable();
+    
+    // Reset form 
+    form.reset();
+    editingId = null;
+    form.querySelector('button[type="submit"]').textContent = 'Add / Update Service';
+  });
+
+  // Initial render
+  renderServicesTable();
+});
+</script>
+</body>
+>>>>>>> e4e1b04b29489a1fcf5832a969a4f4ee00b36de9
 </html>
