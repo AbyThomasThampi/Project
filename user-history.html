@@ -302,6 +302,26 @@
             const badge = document.getElementById('role-badge');
             badge.textContent = user.role === 'admin' ? 'ADMIN' : 'STUDENT';
             badge.className = `role-badge ${user.role === 'admin' ? 'role-admin' : 'role-user'}`;
+
+            //Populate service filter dropdown with available services
+            const serviceFilter = document.getElementById('service-filter');
+
+            // Loop through all services from global services array
+            services.forEach(service => {
+                const option = document.createElement('option');
+                option.value = service.id;  // Store service ID as value
+                option.textContent = service.name; // Display service name
+                serviceFilter.appendChild(option);
+            });
+
+            //Set default date range (last 30 days)
+            const today = new Date();
+            const thirtyDaysAgo = new Date();
+            thirtyDaysAgo.setDate(today.getDate() - 30);
+
+            // Populate date inputs with default values
+            document.getElementById('date-to').valueAsDate = today;
+            document.getElementById('date-from').valueAsDate = thirtyDaysAgo;
         });
     </script>
 </body>
