@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -14,6 +13,7 @@
       <a href="admin-dashboard.html" class="nav-link">Dashboard</a>
       <a href="admin-services.html" class="nav-link">Services</a>
       <a href="admin-queue-manage.html" class="nav-link">Queue Management</a>
+      <a href="user-history.html" class="nav-link">History</a>
     </nav>
     <div class="user-section">
       <span id="user-email"></span>
@@ -107,114 +107,4 @@
 });
   </script>
 </body>
-=======
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>QueueSmart Tutor – Queue Management</title>
-  <link rel="stylesheet" href="styles.css" />
-</head>
-<body>
-  <header class="main-header">
-    <div class="logo">QueueSmart Tutor <span style="font-size:0.9rem;color:#ef4444">(ADMIN)</span></div>
-    <nav class="nav-links">
-      <a href="admin-dashboard.html" class="nav-link">Dashboard</a>
-      <a href="admin-services.html" class="nav-link">Services</a>
-      <a href="admin-queue-manage.html" class="nav-link">Queue Management</a>
-    </nav>
-    <div class="user-section">
-      <span id="user-email"></span>
-      <span class="role-badge role-admin">ADMIN</span>
-      <button onclick="logout()" class="logout-btn">Logout</button>
-    </div>
-  </header>
-
-  <div class="container-full">
-    <div class="card">
-      <div class="card-title">Manage Queue</div>
-      <select id="admin-service-select" class="input-field" style="margin-bottom:1.5rem"></select>
-      <div class="table-container">
-        <table id="queue-table">
-          <thead>
-            <tr>
-              <th>Position</th>
-              <th>Student</th>
-              <th>Priority</th>
-              <th>Joined</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody></tbody>
-        </table>
-      </div>
-      <button onclick="serveNextForSelected()" class="btn-success action-btn" style="margin-top:1rem">Serve Next Student</button>
-    </div>
-  </div>
-
-  <script src="script.js"></script>
-  <script>
-    document.addEventListener('DOMContentLoaded', function () 
-{
-    const user = checkAuth('admin');
-    if (!user) return;
-
-    document.getElementById('user-email').textContent = user.email;
-
-    const select = document.getElementById('admin-service-select');
-    services.forEach(s => {
-      const opt = document.createElement('option');
-      opt.value = s.id;
-      opt.textContent = s.name;
-      select.appendChild(opt);
-    });
-
-    function renderQueueTable() {
-      const serviceId = parseInt(select.value);
-      const tbody = document.querySelector('#queue-table tbody');
-      tbody.innerHTML = '';
-
-      const q = getQueue(serviceId);
-      if (q.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;padding:2rem">Queue is empty</td></tr>`;
-        return;
-      }
-
-      q.forEach((entry, idx) => {
-        const tr = document.createElement('tr');
-        const joined = new Date(entry.joinedAt).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
-        tr.innerHTML = `
-          <td><strong>#${idx+1}</strong></td>
-          <td>${entry.email}</td>
-          <td>
-            <select onchange="changePriority(${serviceId}, '${entry.email}', this.value)" class="input-field" style="width:auto;height:34px">
-              <option value="low" ${entry.priority==='low'?'selected':''}>Low</option>
-              <option value="medium" ${entry.priority==='medium'?'selected':''}>Medium</option>
-              <option value="high" ${entry.priority==='high'?'selected':''}>High</option>
-            </select>
-          </td>
-          <td>${joined}</td>
-          <td>
-            <button onclick="reorderQueue(${serviceId}, ${idx}, ${idx-1});renderQueueTable()" class="action-btn btn-secondary" ${idx===0?'disabled':''}>↑</button>
-            <button onclick="reorderQueue(${serviceId}, ${idx}, ${idx+1});renderQueueTable()" class="action-btn btn-secondary" ${idx===q.length-1?'disabled':''}>↓</button>
-            <button onclick="leaveQueue(${serviceId}, '${entry.email}');renderQueueTable()" class="btn-danger action-btn">Remove</button>
-          </td>
-        `;
-        tbody.appendChild(tr);
-      });
-    }
-
-    window.serveNextForSelected = function() {
-      const serviceId = parseInt(select.value);
-      serveNext(serviceId);
-      renderQueueTable();
-    };
-
-    select.addEventListener('change', renderQueueTable);
-    renderQueueTable();
-});
-  </script>
-</body>
->>>>>>> e4e1b04b29489a1fcf5832a969a4f4ee00b36de9
 </html>
