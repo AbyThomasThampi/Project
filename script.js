@@ -35,8 +35,12 @@ function loadData() {
   saveData();
 }
 
-function recordQueueCompletion(serviceID, userEmail, joinedAt, status = 'completed')
+function recordQueueCompletion(serviceId, userEmail, joinedAt, status = 'completed')
 {
+  /**
+   Records a completed queue entry to user history
+   */
+
   // Get existing history form localStorage or create empty array
   const history = JSON.parse(localStorage.getItem(QUEUE_HISTORY_KEY)) || [];
   
@@ -221,6 +225,9 @@ function serveNext(serviceId) {
   const served = queues[serviceId].shift();
   const service = services.find(s => s.id === serviceId);
   const waitMin = Math.floor((Date.now() - new Date(served.joinedAt)) / 60000);
+
+  // Record this served user in history with status 'served'
+  recordQueueCompletion(serviceId, served.email, served.joinedAt, 'served');
 
   saveData();
   showToast(`Served ${served.email} – ${service.name}`, 'success');
