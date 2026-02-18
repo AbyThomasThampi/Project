@@ -119,6 +119,72 @@
             background: #dc2626;
         }
     </style>
+    <style>
+        /* Table container for horizontal scroll on mobile */
+        .table-container {
+            overflow-x: auto;
+            border-radius: var(--radius);
+        }
+
+        /* History table styling */
+        .history-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: var(--color-primary);
+        }
+
+        /* Table header styling */
+        .history-table th {
+            background: #f8fafc;
+            padding: 1rem;
+            text-align: left;
+            font-weight: 600;
+            color: var(--color-placeholder);
+            border-bottom: 2px solid var(--color-border);
+        }
+
+        /* Table cell styling */
+        .history-table td {
+            padding: 1rem;
+            border-bottom: 1px solid var(--color-border);
+        }
+
+        /* Status badge styling */
+        .status-badge {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.85rem;
+            font-weight: 500;
+            text-transform: capitalize;
+        }
+
+        /* Status-specific colors */
+        .status-completed { background: #d1fae5; color: #065f46; }
+        .status-served { background: #dbeafe; color: #1e40af; }
+        .status-left { background: #fee2e2; color: #b91c1c; }
+
+        /* Wait time styling */
+        .wait-time {
+            font-weight: 600;
+            color: var(--color-accent);
+        }
+
+        /* Empty state styling */
+        .no-history {
+            text-align: center;
+            padding: 4rem;
+            color: var(--color-placeholder);
+            background: #f8fafc;
+            border-radius: var(--radius);
+            font-size: 1.1rem;
+        }
+  
+        /* Row hover effect */
+        .history-table tbody tr:hover {
+            background: #f8fafc;
+        }
+    </style>
 </head>
 <body>
     <header class="main-header">
@@ -194,6 +260,31 @@
                 <!-- Admin clear history button (hidden by default) -->
                 <button onclick="clearAllHistory()" class="clear-history-btn" id="clear-history-btn" style="display: none;">Clear All History</button>
         </div>
+
+        <div class="card">
+            <div class="card-title">Queue History</div>
+            <div class="table-container">
+                <table class="history-table" id="history-table">
+                <thead>
+                    <tr>
+                    <th>Date</th>
+                    <th>Service</th>
+                    <th>Status</th>
+                    <th>Wait Time</th>
+                    <th>Joined</th>
+                    <th>Completed</th>
+                    </tr>
+                </thead>
+                <tbody id="history-body">
+                    <!-- Loading state -->
+                    <tr>
+                    <td colspan="6" class="no-history">Loading history...</td>
+                    </tr>
+                </tbody>
+                </table>
+            </div>
+        </div>       
+        
     </div>
 
     <script src="script.js"></script>
