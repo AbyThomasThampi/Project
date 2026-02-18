@@ -124,6 +124,54 @@ showToast('History cleared successfully', 'success');
 return true;
 }
 
+function getHistoryStats(userEmail) {
+  // Get user's complete history without filters
+  const history = getUserHistory(userEmail);
+
+  //Initialize stats object with default values
+  const stats = {
+    totalVisits: history.length,
+    completedVisits: 0,
+    leftEarly: 0,
+    averageWaitTime: 0,
+    mostUsedService: null,
+    totalWaitTime: 0
+  };
+
+  // calculate additional stats if user has history
+  if (history.length > 0) {
+    // Count completed/served visits
+    stats.completedVisits = history.filter(h =>
+      h.status === 'completed' || h.status === 'served'
+    ).length;
+
+    // Count early leaves
+    stats.leftEarly = history.filter(h => h.status === 'left').length;
+
+    // Calculate total and average wait time
+    const totalWait = history.reduce((sum, h) => sum + (h.waitTimeMinutes || 0), 0);
+    stats.averageWaitTime = Math.round(totalWait / history.length);
+    stats.totalWaitTime = totalWait;
+
+    // find most used service by counting occurrences
+    const serviceCounts = {};
+    history.forEach(h => {
+      serviceCounts[h.serviceName] = (serviceCounts[h.serviceName] || 0) + 1;     
+    });
+
+    // Find service with highest count
+    let maxCount = 0;
+    for (const [service, count] of Object.entries(serviceCounts)) {
+      if (count > maxCount) {
+        maxCount = count;
+        stats.mostUsedService = service;
+      }
+    }
+  }
+
+  return stats;
+}
+
 function saveData() {
   localStorage.setItem(USERS_KEY, JSON.stringify(allUsers));
   localStorage.setItem(SERVICES_KEY, JSON.stringify(services));
