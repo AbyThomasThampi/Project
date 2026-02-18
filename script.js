@@ -100,6 +100,30 @@ function getUserHistory(userEmail, filter = {}) {
   return filtered.sort((a, b) => new Date(b.completedAt) - new Date(a.completedAt));
 }
 
+function clearUserHistory(userEmail) {
+  // Security check - get current logged-in user
+  const currentUser = JSON.parse(localStorage.getItem(CURRENT_USER_KEY));
+
+  // Verify that the current user is an admin
+  if (currentUser && currentUser.role !== 'admin') {
+    showToast('Only administrators can clear history', 'error');
+    return false;
+  }
+
+  // Get all history from localStorage
+  const history = JSON.parse(localStorage.getItem(QUEUE_HISTORY_KEY)) || [];
+
+// filter out the entries for specified user
+const filtered = history.filter(entry => entry.userEmail !== userEmail);
+
+// Save the filtered history back to localStorage
+localStorage.setItem(QUEUE_HISTORY_KEY, JSON.stringify(filtered));
+
+// Notify admin of success
+showToast('History cleared successfully', 'success');
+return true;
+}
+
 function saveData() {
   localStorage.setItem(USERS_KEY, JSON.stringify(allUsers));
   localStorage.setItem(SERVICES_KEY, JSON.stringify(services));
