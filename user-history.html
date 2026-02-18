@@ -46,6 +46,79 @@
             font-weight: 500;
         }
     </style>
+    <style>
+        /* Filter bar container */
+        .filter-bar {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 2rem;
+            flex-wrap: wrap;
+            align-items: center;
+            background: var(--color-primary);
+            padding: 1.5rem;
+            border-radius: var(--radius);
+            border: 1px solid var(--color-border);
+        }
+
+        /* filter input styling */
+        .filter-select, .filter-input {
+            padding: 0.75rem;
+            border: 1px solid var(--color-border);
+            border-radius: var(--radius);
+            font-size: 0.95rem;
+            min-width: 200px;
+            background: var(--color-primary);
+            transition: border-color 0.2s;
+        }
+
+        .filter-select:focus, .filter-input:focus {
+            outline: none;
+            border-color: var(--color-accent);
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+
+        /* Filter button styling */
+        .filter-btn {
+            padding: 0.75rem 1.5rem;
+            background: var(--color-accent);
+            color: white;
+            border: none;
+            border-radius: var(--radius);
+            cursor: pointer;
+            font-weight: 500;
+            transition: background 0.2s;
+        }
+
+        .filter-btn:hover {
+            background: #1d4ed8;
+        }
+
+        /* Reset button styling */
+        .filter-btn.reset {
+            background: var(--color-placeholder);
+        }
+
+        .filter-btn.reset:hover {
+            background: #4b5563;
+        }
+
+        /* Clear history button (admin only) */
+        .clear-history-btn {
+            background: var(--color-danger);
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: var(--radius);
+            cursor: pointer;
+            font-weight: 500;
+            margin-left: auto;
+            transition: background 0.2s;
+        }
+
+        .clear-history-btn:hover {
+            background: #dc2626;
+        }
+    </style>
 </head>
 <body>
     <header class="main-header">
@@ -65,6 +138,8 @@
 
     <div class="container-full">
         <h1>My Queue History</h1>
+        
+        <!-- Statistics Cards -->
         <!-- Total visits card -->
         <div class="stat-card">
             <div class="stat-value" id="total-visits">0</div>
@@ -83,11 +158,42 @@
             <div class="stat-label">Completed</div>
          </div>
 
-         <!-- Left early card -->
-          <div class="stat-card">
+        <!-- Left early card -->
+        <div class="stat-card">
             <div class="stat-value" id="left-early">0</div>
             <div class="stat-label">Left Early</div>
-          </div>
+        </div>
+
+        <!-- Filters -->
+        <div class="card">
+            <div class="card-title">
+                History Filters
+                <button onclick="clearFilters()" class="filter-btn reset">Reset Filters</button>
+            </div>
+            <div class="filter-bar">
+                <!-- Status filter dropdown -->
+                <select id="status-filter" class="filter-select">
+                    <option value="">All Statuses</option>
+                    <option value="completed">Completed</option>
+                    <option value="served">Served</option>
+                    <option value="left">Left Early</option>
+                </select>
+    
+                <!-- Service filter dropdown (populated dynamically) -->
+                <select id="service-filter" class="filter-select">
+                    <option value="">All Services</option>
+                </select>
+    
+                <!-- Date range filters -->
+                <input type="date" id="date-from" class="filter-input" placeholder="From Date">
+                <input type="date" id="date-to" class="filter-input" placeholder="To Date">
+    
+                <!-- Apply filters button -->
+                <button onclick="applyFilters()" class="filter-btn">Apply Filters</button>
+    
+                <!-- Admin clear history button (hidden by default) -->
+                <button onclick="clearAllHistory()" class="clear-history-btn" id="clear-history-btn" style="display: none;">Clear All History</button>
+        </div>
     </div>
 
     <script src="script.js"></script>
