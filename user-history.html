@@ -390,5 +390,48 @@
             document.getElementById('left-early').textContent = leftEarly;
         }
     </script>
+    <script>
+        function renderHistoryTable(history) {
+            const tbody = document.getElementById('history-body');
+
+            // Handle empty state
+            if (history.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" class="no-history">No history found with current filters</td></tr>';
+                return;
+            }
+
+            // Generate table rows from history data
+            tbody.innerHTML = history.map(entry => {
+                // Format dates for display
+                const joinedDate = new Date(entry.joinedAt);
+                const completedDate = new Date(entry.completedAt);
+
+                // Capitalize first letter of status
+                const statusDisplay = entry.status.charAt(0).toUpperCase() + entry.status.slice(1);
+
+                return `
+                    <tr>
+                        <!-- Date column (completion date) -->
+                        <td>${completedDate.toLocaleDateString()}</td>
+                        
+                        <!-- Service name column -->
+                        <td><strong>${entry.serviceName}</strong></td>
+                        
+                        <!-- Status badge column -->
+                        <td><span class="status-badge status-${entry.status}">${statusDisplay}</span></td>
+                        
+                        <!-- Wait time column -->
+                        <td><span class="wait-time">${entry.waitTimeMinutes} min</span></td>
+                        
+                        <!-- Join time column (HH:MM format) -->
+                        <td>${joinedDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</td>
+                        
+                        <!-- Completion time column (HH:MM format) -->
+                        <td>${completedDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</td>
+                        </tr>
+                    `;
+                }).join(''); // Join array of HTML strings
+        }
+    </script>
 </body>
 </html>
