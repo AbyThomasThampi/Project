@@ -35,6 +35,37 @@ function loadData() {
   saveData();
 }
 
+function recordQueueCompletion(serviceID, userEmail, joinedAt, status = 'completed')
+{
+  // Get existing history form localStorage or create empty array
+  const history = JSON.parse(localStorage.getItem(QUEUE_HISTORY_KEY)) || [];
+  
+  // Find the service details to story with the history entry
+  const service = services.find(s => s.id === serviceId);
+
+  // Create a comprehensive history entry with all relevant data
+  const entry = {
+    // Unique ID using timestap + random number to avoid collisions
+    id: Date.now() + Math.random(),
+    serviceId: serviceId,
+    serviceName: service ? service.name : 'Unknown Service',
+    userEmail: userEmail,
+    joinedAt: joinedAt,
+    completedAt: new Date().toISOString(),
+    status: status, // 'completed', 'left', 'served'
+    // Calculate wait time in minutes
+    waitTimeMinutes: Math.floor((Date.now() - new Date(joinedAt)) / 60000)
+  };
+
+  // Add new entry to history array
+  history.push(entry);
+  
+  //Save updated history back to localStorage
+  localStorage.setItem(QUEUE_HISTORY_KEY, JSON.stringify(history));
+
+  return entry;   // for debugging purposes
+}
+
 function saveData() {
   localStorage.setItem(USERS_KEY, JSON.stringify(allUsers));
   localStorage.setItem(SERVICES_KEY, JSON.stringify(services));
