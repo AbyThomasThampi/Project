@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>QueueSmart Tutor – Join Queue</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="main-header">
+    <div class="logo">QueueSmart Tutor</div>
+    <nav class="nav-links">
+      <a href="dashboard.html" class="nav-link">Dashboard</a>
+      <a href="join-queue.html" class="nav-link">Join Queue</a>
+      <a href="queue-status.html" class="nav-link">My Queue</a>
+    </nav>
+    <div class="user-section">
+      <span id="user-email"></span>
+      <span id="role-badge" class="role-badge"></span>
+      <button onclick="logout()" class="logout-btn">Logout</button>
+    </div>
+  </header>
+
+  <div class="container-full">
+    <div class="card">
+      <div class="card-title">Join a Service Queue</div>
+      
+      <select id="service-select" class="input-field" style="margin-bottom:1.5rem;height:54px">
+        <!-- populated by JS -->
+      </select>
+
+      <div id="service-details" class="card" style="margin-bottom:1.5rem"></div>
+
+      <button onclick="joinSelectedQueue()" class="form-btn form-btn--submit" style="width:100%;height:54px;font-size:1.1rem">
+        Join Queue
+      </button>
+    </div>
+  </div>
+
+  <script src="script.js"></script>
+ <script>
+document.addEventListener('DOMContentLoaded', function () 
+{
+
+  const user = checkAuth();
+  if (!user) return;
+
+  document.getElementById('user-email').textContent = user.email;
+  const badge = document.getElementById('role-badge');
+  badge.textContent = user.role === 'admin' ? 'ADMIN' : 'STUDENT';
+  badge.className = `role-badge ${user.role === 'admin' ? 'role-admin' : 'role-user'}`;
+
+  const select = document.getElementById('service-select');
+
+  services.forEach(s => {
+    const opt = document.createElement('option');
+    opt.value = s.id;
+    opt.textContent = `${s.name} (${getQueue(s.id).length} in queue)`;
+    select.appendChild(opt);
+  });
+
+  function updateServiceDetails() {
+    const id = parseInt(select.value);
+    const service = services.find(s => s.id === id);
+    if (!service) return;
+
+    const q = getQueue(id);
+    const myPos = q.findIndex(entry => entry.email === user.email) + 1;
+    const detailsDiv = document.getElementById('service-details');
+
+    detailsDiv.innerHTML = `
+      <h3>${service.name}</h3>
+      <p>${service.description}</p>
+      <p><strong>Expected duration:</strong> ${service.expectedDuration} minutes</p>
+      <p><strong>Current queue length:</strong> ${q.length} students</p>
+      ${myPos > 0 ? `<p style="color:#10b981">You are already in this queue at position <strong>#${myPos}</strong></p>` : ''}
+    `;
+  }
+
+  select.addEventListener('change', updateServiceDetails);
+  updateServiceDetails();
+
+  window.joinSelectedQueue = function() {
+    const serviceId = parseInt(select.value);
+    addToQueue(serviceId, user.email);
+    setTimeout(() => location.href = 'queue-status.html', 1200);
+  };
+
+});
+</script>
+
+</body>
+</html>

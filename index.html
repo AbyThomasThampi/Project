@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>QueueSmart Tutor – Sign In</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="container">
+    <div class="form-container">
+      <div class="form-header">
+        <h1>QueueSmart Tutor</h1>
+        <p>Sign in to join the queue</p>
+      </div>
+
+      <form id="login-form" class="form-box" autocomplete="on">
+        <div class="input-group">
+          <input 
+            type="email" 
+            id="email" 
+            class="input-field" 
+            placeholder=" " 
+            required 
+            autocomplete="email"
+          />
+          <label for="email" class="floating-label">Email address</label>
+        </div>
+
+        <div class="input-group password-group">
+          <input 
+            type="password" 
+            id="password" 
+            class="input-field" 
+            placeholder=" " 
+            required 
+            autocomplete="current-password"
+          />
+          <label for="password" class="floating-label">Password</label>
+          <button type="button" class="toggle-password" aria-label="Toggle password visibility">
+            Show
+          </button>
+        </div>
+        <button type="submit" class="form-btn form-btn--submit">
+          Sign In
+        </button>
+      </form>
+
+      <div class="form-bottom">
+        <p>Don't have an account? <a href="signup.html" class="form-link">Sign up</a></p>
+      </div>
+
+      <div class="demo-note">
+        <small>Demo accounts:<br>
+          Student: <strong>student@tutor.com</strong> / student123<br>
+          Admin: <strong>admin@tutor.com</strong> / admin123
+        </small>
+      </div>
+    </div>
+  </div>
+
+  <script src="script.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', function () 
+{
+    // Password toggle
+    document.querySelectorAll('.toggle-password').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const input = btn.parentElement.querySelector('input');
+        if (input.type === 'password') {
+          input.type = 'text';
+          btn.textContent = 'Hide';
+        } else {
+          input.type = 'password';
+          btn.textContent = 'Show';
+        }
+      });
+    });
+
+    // Form handler (from shared script.js)
+    document.getElementById('login-form').addEventListener('submit', handleLogin);
+});
+  </script>
+</body>
+</html>

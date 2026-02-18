@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>QueueSmart Tutor – Admin Dashboard</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="main-header">
+    <div class="logo">QueueSmart Tutor <span style="font-size:0.9rem;color:#ef4444">(ADMIN)</span></div>
+    <nav class="nav-links">
+      <a href="admin-dashboard.html" class="nav-link">Dashboard</a>
+      <a href="admin-services.html" class="nav-link">Services</a>
+      <a href="admin-queue-manage.html" class="nav-link">Queue Management</a>
+    </nav>
+    <div class="user-section">
+      <span id="user-email"></span>
+      <span id="role-badge" class="role-badge role-admin">ADMIN</span>
+      <button onclick="logout()" class="logout-btn">Logout</button>
+    </div>
+  </header>
+
+  <div class="container-full">
+    <div class="card">
+      <div class="card-title">Overview</div>
+      <div id="admin-stats" class="stats-grid"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Live Queues</div>
+      <div id="live-queues" class="table-container"></div>
+    </div>
+  </div>
+
+  <script src="script.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', function () 
+{
+    const user = checkAuth('admin');
+    if (!user) return;
+
+    document.getElementById('user-email').textContent = user.email;
+
+    function renderAdminStats() {
+      let totalInQueue = 0;
+      Object.keys(queues).forEach(k => totalInQueue += queues[k].length);
+
+      const html = `
+        <div class="stat-item">
+          <div class="stat-number">${services.length}</div>
+          <div>Services</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-number">${totalInQueue}</div>
+          <div>Students in queue</div>
+        </div>
+      `;
+      document.getElementById('admin-stats').innerHTML = html;
+    }
+
+    function renderLiveQueues() {
+      const container = document.getElementById('live-queues');
+      let html = `<table><thead><tr><th>Service</th><th>Queue Length</th><th>Action</th></tr></thead><tbody>`;
+      
+      services.forEach(s => {
+        const len = getQueue(s.id).length;
+        html += `
+          <tr>
+            <td><strong>${s.name}</strong></td>
+            <td>${len}</td>
+            <td><button onclick="location.href='admin-queue-manage.html'" class="btn-primary action-btn">Manage</button></td>
+          </tr>`;
+      });
+      html += `</tbody></table>`;
+      container.innerHTML = html;
+    }
+
+    renderAdminStats();
+    renderLiveQueues();
+});
+  </script>
+</body>
+</html>
