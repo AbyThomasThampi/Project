@@ -323,6 +323,52 @@
             document.getElementById('date-to').valueAsDate = today;
             document.getElementById('date-from').valueAsDate = thirtyDaysAgo;
         });
+
+        function loadHistory(user) {
+            // Get user's complete history from script.js function
+            const history = getUserHistory(user.email);
+
+            // Get current filter values
+            const filters = getCurrentFilters();
+
+            //Apply filters to history data
+            const filteredHistory = applyFiltersToHistory(history, filters);
+
+            //Update statistics cards with filtered data
+            updateStats(history, filteredHistory);        
+        }
+
+        function getCurrentFilters() {
+            return {
+                status: document.getElementById('status-filter').value,
+                serviceId: document.getElementById('service-filter').value ? 
+                    parseInt(document.getElementById('service-filter').value) : null,
+                startDate: document.getElementById('date-from').value,
+                endDate: document.getElementById('date-to').value
+            };
+        }
+
+        function applyFiltersToHistory(history, filters) {
+            return history.filter(entry => {
+                // Filter by status if selected
+                if (filters.status && entry.status !== filters.status) return false;
+                
+                // Filter by service if selected
+                if (filters.serviceId && entry.serviceId !== filters.serviceId) return false;
+                
+                // Filter by start date if selected
+                if (filters.startDate && new Date(entry.completedAt) < new Date(filters.startDate)) return false;
+                
+                // Filter by end date if selected (include entire day)
+                if (filters.endDate) {
+                    const endDate = new Date(filters.endDate);
+                    endDate.setHours(23, 59, 59); // End of the selected day
+                    if (new Date(entry.completedAt) > endDate) return false;
+                }
+            
+            return true; // Entry passed all filters
+            });
+        }
     </script>
 </body>
 </html>
