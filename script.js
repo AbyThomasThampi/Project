@@ -308,7 +308,19 @@ function addToQueue(serviceId, userEmail) {
   saveData();
 
   const service = services.find(s => s.id === serviceId);
-  showToast(`Joined ${service.name}! Position: ${queues[serviceId].length}`, 'success');
+  const position = queues[serviceId].length;
+  const wait = calculateWait(serviceId, position);
+  
+  // Create notification
+  createNotification(
+    userEmail,
+    'success',
+    `Joined ${service.name}`,
+    `You're at position ${position} with an estimated wait of ${wait} minutes`,
+    serviceId
+  );
+  
+  showToast(`Joined ${service.name}! Position: ${position}`, 'success');
   return true;
 }
 
@@ -361,6 +373,65 @@ function reorderQueue(serviceId, fromIdx, toIdx) {
 function calculateWait(serviceId, position) { // position starts at 1
   const service = services.find(s => s.id === serviceId);
   return position * (service ? service.expectedDuration : 30);
+}
+
+// ====================== NOTIFICATIONS ======================
+const NOTIFICATIONS_KEY = 'notifications';
+
+function createNotification(userEmail, type, title, message, serviceId = null) {
+  const notification = {
+    id: Date.now() + Math.random(),
+    userEmail: userEmail,
+    type: type, // 'info', 'success', 'warning', 'alert'
+    title: title,
+    message: message,
+    serviceId: serviceId,
+    timestamp: new Date().toISOString(),
+    read: false
+  };
+
+  const notifications = JSON.parse(localStorage.getItem(NOTIFICATIONS_KEY)) || [];
+  notifications.push(notification);
+  
+  // Keep only last 100 notifications per user to avoid storage bloat
+  const userNotifications = notifications.filter(n => n.userEmail === userEmail);
+  if (userNotifications.length > 100) {
+    const oldestIdx = notifications.findIndex(n => n.id === userNotifications[0].id);
+    notifications.splice(oldestIdx, 1);
+  }
+  
+  localStorage.setItem(NOTIFICATIONS_KEY, JSON.stringify(notifications));
+  return notification;
+}
+
+function getUserNotifications(userEmail, limit = 5) {
+  const notifications = JSON.parse(localStorage.getItem(NOTIFICATIONS_KEY)) || [];
+  const userNotifs = notifications.filter(n => n.userEmail === userEmail && !n.read);
+  
+  // Sort by newest first and limit to specified amount
+  return userNotifs
+    .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
+    .slice(0, limit);
+}
+
+function markNotificationRead(notificationId) {
+  const notifications = JSON.parse(localStorage.getItem(NOTIFICATIONS_KEY)) || [];
+  const notif = notifications.find(n => n.id === notificationId);
+  if (notif) {
+    notif.read = true;
+    localStorage.setItem(NOTIFICATIONS_KEY, JSON.stringify(notifications));
+  }
+}
+
+function clearNotifications(userEmail) {
+  const notifications = JSON.parse(localStorage.getItem(NOTIFICATIONS_KEY)) || [];
+  const filtered = notifications.filter(n => n.userEmail !== userEmail);
+  localStorage.setItem(NOTIFICATIONS_KEY, JSON.stringify(filtered));
+}
+
+function getUnreadNotificationCount(userEmail) {
+  const notifications = JSON.parse(localStorage.getItem(NOTIFICATIONS_KEY)) || [];
+  return notifications.filter(n => n.userEmail === userEmail && !n.read).length;
 }
 
 // ====================== INIT ======================

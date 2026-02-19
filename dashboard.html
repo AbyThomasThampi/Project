@@ -31,6 +31,15 @@
       <div id="current-queue-summary" class="stats-grid"></div>
     </div>
 
+    <!-- Estimated Wait Times Widget -->
+    <div class="card">
+      <div class="card-title">
+        ⏱️ Estimated Wait Times
+        <span id="refresh-indicator" style="font-size:0.85rem;color:#6b7280;margin-left:auto">Updating...</span>
+      </div>
+      <div id="wait-times-widget" class="wait-times-container"></div>
+    </div>
+
     <!-- Active Services -->
     <div class="card">
       <div class="card-title">
@@ -91,6 +100,52 @@
       }
     }
 
+    // Render estimated wait times widget
+    function renderWaitTimesWidget() {
+      const container = document.getElementById('wait-times-widget');
+      container.innerHTML = '';
+
+      services.forEach(s => {
+        const q = getQueue(s.id);
+        const qLen = q.length;
+        const estimatedWait = calculateWait(s.id, qLen + 1); // Position for next person joining
+        
+        let statusColor = 'green'; 
+        let statusText = 'Short wait';
+        if (estimatedWait > 90) {
+          statusColor = 'red';
+          statusText = 'Long wait';
+        } 
+        else if (estimatedWait > 45) {
+          statusColor = 'orange';
+          statusText = 'Moderate wait';
+        }
+
+        const row = document.createElement('div');
+        row.style.cssText = 'display:flex;justify-content:space-between;align-items:center;padding:1rem;border-bottom:1px solid #e5e7eb;transition:background 0.2s';
+        row.innerHTML = `
+          <div style="flex:1">
+            <div style="font-weight:600;margin-bottom:4px">${s.name}</div>
+            <div style="font-size:0.85rem;color:#6b7280">${qLen} student${qLen !== 1 ? 's' : ''} in queue</div>
+          </div>
+          <div style="text-align:right">
+            <div style="font-size:1.5rem;font-weight:700;color:${statusColor}">${estimatedWait} min</div>
+            <div style="font-size:0.8rem;color:${statusColor};font-weight:500">${statusText}</div>
+          </div>
+        `;
+        container.appendChild(row);
+      });
+
+      // Remove last border
+      const lastRow = container.lastChild;
+      if (lastRow) lastRow.style.borderBottom = 'none';
+
+      // Update refresh indicator
+      const now = new Date();
+      const timeStr = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+      document.getElementById('refresh-indicator').textContent = `Last updated: ${timeStr}`;
+    }
+
     // Render services cards
     function renderServices() {
       const container = document.getElementById('services-grid');
@@ -114,10 +169,70 @@
       });
     }
 
+    // Render notifications
+    function renderNotifications() {
+    const container = document.getElementById('notifications-list');
+    const notifs = getUserNotifications(user.email, 5);
+
+    if (notifs.length === 0) {
+    container.innerHTML = `<div style="padding:2rem;text-align:center;color:#6b7280">No notifications yet</div>`;
+    return;
+    }
+
+    container.innerHTML = '';
+
+    notifs.forEach(notif => {
+    const notifEl = document.createElement('div');
+    notifEl.style.cssText =
+      'padding:1rem;border-left:4px solid;margin-bottom:0.75rem;background:#f9fafb;border-radius:0.375rem;display:flex;justify-content:space-between;align-items:flex-start';
+
+    const colors = { success:'#10b981', info:'#3b82f6', warning:'#f59e0b', alert:'#ef4444' };
+    notifEl.style.borderLeftColor = colors[notif.type] || '#3b82f6';
+
+    const time = new Date(notif.timestamp);
+    const timeStr = time.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+
+    const content = document.createElement('div');
+    content.style.flex = '1';
+    content.innerHTML = `
+      <div style="font-weight:600;font-size:0.95rem;margin-bottom:4px">${notif.title}</div>
+      <div style="font-size:0.85rem;color:#6b7280;margin-bottom:6px">${notif.message}</div>
+      <div style="font-size:0.75rem;color:#9ca3af">${timeStr}</div>
+    `;
+
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.textContent = '✕';
+    btn.style.cssText = 'background:none;border:none;color:#9ca3af;cursor:pointer;font-size:1.25rem;padding:0;margin-left:1rem';
+
+   btn.addEventListener('click', (e) => {
+  e.preventDefault();
+  console.log('clicked notif', notif.id);  // ✅ should print every click
+  markNotificationRead(notif.id);
+  console.log('after mark, now rerendering');
+  renderNotifications();
+});
+
+
+    notifEl.appendChild(content);
+    notifEl.appendChild(btn);
+    container.appendChild(notifEl);
+  });
+}
+
+
     // Init page
     renderCurrentQueues();
+    renderWaitTimesWidget();
     renderServices();
     renderNotifications();
+
+    // Auto-refresh wait times every 30 seconds
+    setInterval(() => {
+      renderWaitTimesWidget();
+      renderCurrentQueues();
+      renderNotifications();
+    }, 30000);
 });
   </script>
 </body>
