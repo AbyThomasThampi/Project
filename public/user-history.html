@@ -253,7 +253,12 @@ document.addEventListener('DOMContentLoaded', async function() {
     const today = new Date();
     const thirtyDaysAgo = new Date(today);
     thirtyDaysAgo.setDate(today.getDate() - 30);
-    document.getElementById('date-to').valueAsDate = today;
+    
+    // Set to tomorrow (date-to)
+    const tomorrow = new Date(today);
+    tomorrow.setDate(today.getDate() + 1);  
+
+    document.getElementById('date-to').valueAsDate = tomorrow;
     document.getElementById('date-from').valueAsDate = thirtyDaysAgo;
 
     // Load and show history
@@ -377,7 +382,12 @@ function clearFilters() {
     const thirtyDaysAgo = new Date(today);
     thirtyDaysAgo.setDate(today.getDate() - 30);
     
-    document.getElementById('date-to').valueAsDate = today;
+    // Set to tomorrow
+    const tomorrow = new Date(today);
+    tomorrow.setDate(today.getDate() + 1);
+    
+
+    document.getElementById('date-to').valueAsDate = tomorrow;
     document.getElementById('date-from').valueAsDate = thirtyDaysAgo;
 
     const user = checkAuth();
