@@ -93,7 +93,6 @@ describe('Validation Helpers', () => {
 // ═══════════════════════════════════════════════════════════════════════════════
 describe('Wait-Time Estimation Logic', () => {
   test('returns position × service duration for known service', () => {
-    // Service 1 has expectedDuration: 45
     expect(calculateWait(1, 1)).toBe(45);
     expect(calculateWait(1, 3)).toBe(135);
   });
@@ -206,57 +205,80 @@ describe('Service Module — POST /api/services', () => {
   const validService = { name: 'Python Help', description: 'Python tutoring', expectedDuration: 45 };
 
   test('creates a new service', async () => {
-    const res = await request(app).post('/api/services').send(validService);
+    const res = await request(app)
+      .post('/api/services')
+      .set('x-user-email', 'admin@tutor.com')
+      .send(validService);
     expect(res.status).toBe(201);
     expect(res.body.service.name).toBe('Python Help');
   });
 
   test('returns 400 when name is missing', async () => {
-    const res = await request(app).post('/api/services')
+    const res = await request(app)
+      .post('/api/services')
+      .set('x-user-email', 'admin@tutor.com')
       .send({ description: 'desc', expectedDuration: 30 });
     expect(res.status).toBe(400);
   });
 
   test('returns 400 when duration < 5', async () => {
-    const res = await request(app).post('/api/services')
+    const res = await request(app)
+      .post('/api/services')
+      .set('x-user-email', 'admin@tutor.com')
       .send({ ...validService, expectedDuration: 2 });
     expect(res.status).toBe(400);
   });
 
   test('defaults priority to medium when not provided', async () => {
-    const res = await request(app).post('/api/services').send(validService);
+    const res = await request(app)
+      .post('/api/services')
+      .set('x-user-email', 'admin@tutor.com')
+      .send(validService);
     expect(res.body.service.priority).toBe('medium');
   });
 });
 
 describe('Service Module — PUT /api/services/:id', () => {
   test('updates a service name', async () => {
-    const res = await request(app).put('/api/services/1').send({ name: 'Advanced Algebra' });
+    const res = await request(app)
+      .put('/api/services/1')
+      .set('x-user-email', 'admin@tutor.com')
+      .send({ name: 'Advanced Algebra' });
     expect(res.status).toBe(200);
     expect(res.body.service.name).toBe('Advanced Algebra');
   });
 
   test('returns 404 for unknown service', async () => {
-    const res = await request(app).put('/api/services/999').send({ name: 'X' });
+    const res = await request(app)
+      .put('/api/services/999')
+      .set('x-user-email', 'admin@tutor.com')
+      .send({ name: 'X' });
     expect(res.status).toBe(404);
   });
 
   test('returns 400 for invalid priority', async () => {
-    const res = await request(app).put('/api/services/1').send({ priority: 'critical' });
+    const res = await request(app)
+      .put('/api/services/1')
+      .set('x-user-email', 'admin@tutor.com')
+      .send({ priority: 'critical' });
     expect(res.status).toBe(400);
   });
 });
 
 describe('Service Module — DELETE /api/services/:id', () => {
   test('deletes a service', async () => {
-    const res = await request(app).delete('/api/services/1');
+    const res = await request(app)
+      .delete('/api/services/1')
+      .set('x-user-email', 'admin@tutor.com');
     expect(res.status).toBe(200);
     const all = await request(app).get('/api/services');
     expect(all.body.services).toHaveLength(2);
   });
 
   test('returns 404 for unknown service', async () => {
-    const res = await request(app).delete('/api/services/999');
+    const res = await request(app)
+      .delete('/api/services/999')
+      .set('x-user-email', 'admin@tutor.com');
     expect(res.status).toBe(404);
   });
 });
@@ -267,6 +289,7 @@ describe('Service Module — DELETE /api/services/:id', () => {
 describe('Queue Module — Join', () => {
   test('user joins queue successfully', async () => {
     const res = await request(app).post('/api/queue/1/join')
+      .set('x-user-email', 'student@tutor.com')
       .send({ email: 'student@tutor.com' });
     expect(res.status).toBe(201);
     expect(res.body.position).toBe(1);
@@ -274,52 +297,77 @@ describe('Queue Module — Join', () => {
   });
 
   test('returns 409 if user already in queue', async () => {
-    await request(app).post('/api/queue/1/join').send({ email: 'student@tutor.com' });
-    const res = await request(app).post('/api/queue/1/join')
+    await request(app).post('/api/queue/1/join')
+      .set('x-user-email', 'student@tutor.com')
       .send({ email: 'student@tutor.com' });
+
+    const res = await request(app).post('/api/queue/1/join')
+      .set('x-user-email', 'student@tutor.com')
+      .send({ email: 'student@tutor.com' });
+
     expect(res.status).toBe(409);
   });
 
   test('returns 404 for unknown service', async () => {
     const res = await request(app).post('/api/queue/999/join')
+      .set('x-user-email', 'student@tutor.com')
       .send({ email: 'student@tutor.com' });
     expect(res.status).toBe(404);
   });
 
   test('returns 400 when email is missing', async () => {
-    const res = await request(app).post('/api/queue/1/join').send({});
+    const res = await request(app).post('/api/queue/1/join')
+      .set('x-user-email', 'student@tutor.com')
+      .send({});
     expect(res.status).toBe(400);
   });
 
   test('returns 400 for invalid email format', async () => {
     const res = await request(app).post('/api/queue/1/join')
+      .set('x-user-email', 'student@tutor.com')
       .send({ email: 'not-an-email' });
     expect(res.status).toBe(400);
   });
 
   test('second user gets position 2', async () => {
-    await request(app).post('/api/queue/1/join').send({ email: 'a@test.com' });
-    const res = await request(app).post('/api/queue/1/join').send({ email: 'b@test.com' });
+    await request(app).post('/api/queue/1/join')
+      .set('x-user-email', 'a@test.com')
+      .send({ email: 'a@test.com' });
+
+    const res = await request(app).post('/api/queue/1/join')
+      .set('x-user-email', 'b@test.com')
+      .send({ email: 'b@test.com' });
+
     expect(res.body.position).toBe(2);
   });
 });
 
 describe('Queue Module — View', () => {
   test('returns queue with annotated positions', async () => {
-    await request(app).post('/api/queue/1/join').send({ email: 'student@tutor.com' });
-    const res = await request(app).get('/api/queue/1');
+    await request(app).post('/api/queue/1/join')
+      .set('x-user-email', 'student@tutor.com')
+      .send({ email: 'student@tutor.com' });
+
+    const res = await request(app)
+      .get('/api/queue/1')
+      .set('x-user-email', 'admin@tutor.com');
+
     expect(res.status).toBe(200);
     expect(res.body.queue[0].position).toBe(1);
     expect(res.body.queue[0].estimatedWait).toBe(45);
   });
 
   test('returns 404 for unknown service', async () => {
-    const res = await request(app).get('/api/queue/999');
+    const res = await request(app)
+      .get('/api/queue/999')
+      .set('x-user-email', 'admin@tutor.com');
     expect(res.status).toBe(404);
   });
 
   test('returns empty queue correctly', async () => {
-    const res = await request(app).get('/api/queue/1');
+    const res = await request(app)
+      .get('/api/queue/1')
+      .set('x-user-email', 'admin@tutor.com');
     expect(res.status).toBe(200);
     expect(res.body.queue).toHaveLength(0);
   });
@@ -327,17 +375,26 @@ describe('Queue Module — View', () => {
 
 describe('Queue Module — Leave', () => {
   test('user leaves queue successfully', async () => {
-    await request(app).post('/api/queue/1/join').send({ email: 'student@tutor.com' });
-    const res = await request(app).delete('/api/queue/1/leave')
+    await request(app).post('/api/queue/1/join')
+      .set('x-user-email', 'student@tutor.com')
       .send({ email: 'student@tutor.com' });
+
+    const res = await request(app).delete('/api/queue/1/leave')
+      .set('x-user-email', 'student@tutor.com')
+      .send({ email: 'student@tutor.com' });
+
     expect(res.status).toBe(200);
-    // Verify queue is empty
-    const q = await request(app).get('/api/queue/1');
+
+    const q = await request(app)
+      .get('/api/queue/1')
+      .set('x-user-email', 'admin@tutor.com');
+
     expect(q.body.queueLength).toBe(0);
   });
 
   test('returns 404 if user not in queue', async () => {
     const res = await request(app).delete('/api/queue/1/leave')
+      .set('x-user-email', 'ghost@test.com')
       .send({ email: 'ghost@test.com' });
     expect(res.status).toBe(404);
   });
@@ -345,22 +402,39 @@ describe('Queue Module — Leave', () => {
 
 describe('Queue Module — Serve Next', () => {
   test('serves first user in queue', async () => {
-    await request(app).post('/api/queue/1/join').send({ email: 'first@test.com' });
-    await request(app).post('/api/queue/1/join').send({ email: 'second@test.com' });
-    const res = await request(app).post('/api/queue/1/serve');
+    await request(app).post('/api/queue/1/join')
+      .set('x-user-email', 'first@test.com')
+      .send({ email: 'first@test.com' });
+
+    await request(app).post('/api/queue/1/join')
+      .set('x-user-email', 'second@test.com')
+      .send({ email: 'second@test.com' });
+
+    const res = await request(app)
+      .post('/api/queue/1/serve')
+      .set('x-user-email', 'admin@tutor.com');
+
     expect(res.status).toBe(200);
     expect(res.body.served.email).toBe('first@test.com');
     expect(res.body.remainingQueue).toBe(1);
   });
 
   test('returns 400 when queue is empty', async () => {
-    const res = await request(app).post('/api/queue/1/serve');
+    const res = await request(app)
+      .post('/api/queue/1/serve')
+      .set('x-user-email', 'admin@tutor.com');
     expect(res.status).toBe(400);
   });
 
   test('records history entry after serving', async () => {
-    await request(app).post('/api/queue/1/join').send({ email: 'first@test.com' });
-    await request(app).post('/api/queue/1/serve');
+    await request(app).post('/api/queue/1/join')
+      .set('x-user-email', 'first@test.com')
+      .send({ email: 'first@test.com' });
+
+    await request(app)
+      .post('/api/queue/1/serve')
+      .set('x-user-email', 'admin@tutor.com');
+
     expect(store.history).toHaveLength(1);
     expect(store.history[0].status).toBe('served');
   });
@@ -368,49 +442,73 @@ describe('Queue Module — Serve Next', () => {
 
 describe('Queue Module — Priority & Reorder', () => {
   beforeEach(async () => {
-    await request(app).post('/api/queue/1/join').send({ email: 'a@test.com' });
-    await request(app).post('/api/queue/1/join').send({ email: 'b@test.com' });
+    await request(app).post('/api/queue/1/join')
+      .set('x-user-email', 'a@test.com')
+      .send({ email: 'a@test.com' });
+
+    await request(app).post('/api/queue/1/join')
+      .set('x-user-email', 'b@test.com')
+      .send({ email: 'b@test.com' });
   });
 
   test('changes user priority', async () => {
-    const res = await request(app).patch('/api/queue/1/priority')
+    const res = await request(app)
+      .patch('/api/queue/1/priority')
+      .set('x-user-email', 'admin@tutor.com')
       .send({ email: 'a@test.com', priority: 'high' });
+
     expect(res.status).toBe(200);
     expect(res.body.entry.priority).toBe('high');
   });
 
   test('returns 400 for invalid priority', async () => {
-    const res = await request(app).patch('/api/queue/1/priority')
+    const res = await request(app)
+      .patch('/api/queue/1/priority')
+      .set('x-user-email', 'admin@tutor.com')
       .send({ email: 'a@test.com', priority: 'critical' });
+
     expect(res.status).toBe(400);
   });
 
   test('reorders queue entries', async () => {
-    const res = await request(app).patch('/api/queue/1/reorder')
+    const res = await request(app)
+      .patch('/api/queue/1/reorder')
+      .set('x-user-email', 'admin@tutor.com')
       .send({ fromIndex: 0, toIndex: 1 });
+
     expect(res.status).toBe(200);
     expect(res.body.queue[0].email).toBe('b@test.com');
   });
 
   test('returns 400 for out-of-bounds reorder index', async () => {
-    const res = await request(app).patch('/api/queue/1/reorder')
+    const res = await request(app)
+      .patch('/api/queue/1/reorder')
+      .set('x-user-email', 'admin@tutor.com')
       .send({ fromIndex: 0, toIndex: 99 });
+
     expect(res.status).toBe(400);
   });
 });
 
 describe('Queue Module — Wait Time Endpoint', () => {
   test('returns 0-position wait for empty queue', async () => {
-    const res = await request(app).get('/api/queue/1/wait');
+    const res = await request(app)
+      .get('/api/queue/1/wait')
+      .set('x-user-email', 'student@tutor.com');
+
     expect(res.status).toBe(200);
-    // queueLength=0, so wait = (0+1)*45 = 45
     expect(res.body.estimatedWait).toBe(45);
   });
 
   test('increases wait after user joins', async () => {
-    await request(app).post('/api/queue/1/join').send({ email: 'u@test.com' });
-    const res = await request(app).get('/api/queue/1/wait');
-    // queueLength=1, so wait = (1+1)*45 = 90
+    await request(app).post('/api/queue/1/join')
+      .set('x-user-email', 'u@test.com')
+      .send({ email: 'u@test.com' });
+
+    const res = await request(app)
+      .get('/api/queue/1/wait')
+      .set('x-user-email', 'u@test.com');
+
     expect(res.body.estimatedWait).toBe(90);
   });
 });
@@ -420,38 +518,58 @@ describe('Queue Module — Wait Time Endpoint', () => {
 // ═══════════════════════════════════════════════════════════════════════════════
 describe('Notification Module', () => {
   test('creates notification via POST', async () => {
-    const res = await request(app).post('/api/notifications').send({
-      userEmail: 'student@tutor.com',
-      type: 'info',
-      title: 'Test Alert',
-      message: 'This is a test'
-    });
+    const res = await request(app)
+      .post('/api/notifications')
+      .set('x-user-email', 'admin@tutor.com')
+      .send({
+        userEmail: 'student@tutor.com',
+        type: 'info',
+        title: 'Test Alert',
+        message: 'This is a test'
+      });
     expect(res.status).toBe(201);
     expect(res.body.notification.title).toBe('Test Alert');
   });
 
   test('returns 400 when required fields are missing', async () => {
-    const res = await request(app).post('/api/notifications').send({ type: 'info' });
+    const res = await request(app)
+      .post('/api/notifications')
+      .set('x-user-email', 'admin@tutor.com')
+      .send({ type: 'info' });
     expect(res.status).toBe(400);
   });
 
   test('fetches unread notifications for user', async () => {
-    await request(app).post('/api/notifications').send({
-      userEmail: 'student@tutor.com', type: 'info', title: 'A', message: 'B'
-    });
-    const res = await request(app).get('/api/notifications/student@tutor.com');
+    await request(app)
+      .post('/api/notifications')
+      .set('x-user-email', 'admin@tutor.com')
+      .send({
+        userEmail: 'student@tutor.com', type: 'info', title: 'A', message: 'B'
+      });
+
+    const res = await request(app)
+      .get('/api/notifications/student@tutor.com')
+      .set('x-user-email', 'student@tutor.com');
+
     expect(res.status).toBe(200);
     expect(res.body.count).toBe(1);
   });
 
   test('marks notification as read', async () => {
-    await request(app).post('/api/notifications').send({
-      userEmail: 'student@tutor.com', type: 'info', title: 'A', message: 'B'
-    });
+    await request(app)
+      .post('/api/notifications')
+      .set('x-user-email', 'admin@tutor.com')
+      .send({
+        userEmail: 'student@tutor.com', type: 'info', title: 'A', message: 'B'
+      });
+
     const patchRes = await request(app).patch('/api/notifications/1/read');
     expect(patchRes.status).toBe(200);
-    // Should now show 0 unread
-    const getRes = await request(app).get('/api/notifications/student@tutor.com');
+
+    const getRes = await request(app)
+      .get('/api/notifications/student@tutor.com')
+      .set('x-user-email', 'student@tutor.com');
+
     expect(getRes.body.count).toBe(0);
   });
 
@@ -461,18 +579,35 @@ describe('Notification Module', () => {
   });
 
   test('clears all notifications for user', async () => {
-    await request(app).post('/api/notifications').send({
-      userEmail: 'student@tutor.com', type: 'info', title: 'A', message: 'B'
-    });
-    const delRes = await request(app).delete('/api/notifications/student@tutor.com');
+    await request(app)
+      .post('/api/notifications')
+      .set('x-user-email', 'admin@tutor.com')
+      .send({
+        userEmail: 'student@tutor.com', type: 'info', title: 'A', message: 'B'
+      });
+
+    const delRes = await request(app)
+      .delete('/api/notifications/student@tutor.com')
+      .set('x-user-email', 'student@tutor.com');
+
     expect(delRes.status).toBe(200);
-    const getRes = await request(app).get('/api/notifications/student@tutor.com');
+
+    const getRes = await request(app)
+      .get('/api/notifications/student@tutor.com')
+      .set('x-user-email', 'student@tutor.com');
+
     expect(getRes.body.count).toBe(0);
   });
 
   test('auto-creates notification when user joins queue', async () => {
-    await request(app).post('/api/queue/1/join').send({ email: 'student@tutor.com' });
-    const res = await request(app).get('/api/notifications/student@tutor.com');
+    await request(app).post('/api/queue/1/join')
+      .set('x-user-email', 'student@tutor.com')
+      .send({ email: 'student@tutor.com' });
+
+    const res = await request(app)
+      .get('/api/notifications/student@tutor.com')
+      .set('x-user-email', 'student@tutor.com');
+
     expect(res.body.count).toBeGreaterThan(0);
   });
 });
@@ -488,8 +623,14 @@ describe('History Module', () => {
   });
 
   test('records history when user is served', async () => {
-    await request(app).post('/api/queue/1/join').send({ email: 'student@tutor.com' });
-    await request(app).post('/api/queue/1/serve');
+    await request(app).post('/api/queue/1/join')
+      .set('x-user-email', 'student@tutor.com')
+      .send({ email: 'student@tutor.com' });
+
+    await request(app)
+      .post('/api/queue/1/serve')
+      .set('x-user-email', 'admin@tutor.com');
+
     const res = await request(app).get('/api/history/student@tutor.com');
     expect(res.status).toBe(200);
     expect(res.body.history).toHaveLength(1);
@@ -497,15 +638,27 @@ describe('History Module', () => {
   });
 
   test('records history when user leaves queue', async () => {
-    await request(app).post('/api/queue/1/join').send({ email: 'student@tutor.com' });
-    await request(app).delete('/api/queue/1/leave').send({ email: 'student@tutor.com' });
+    await request(app).post('/api/queue/1/join')
+      .set('x-user-email', 'student@tutor.com')
+      .send({ email: 'student@tutor.com' });
+
+    await request(app).delete('/api/queue/1/leave')
+      .set('x-user-email', 'student@tutor.com')
+      .send({ email: 'student@tutor.com' });
+
     const res = await request(app).get('/api/history/student@tutor.com');
     expect(res.body.history[0].status).toBe('left');
   });
 
   test('returns stats for user with history', async () => {
-    await request(app).post('/api/queue/1/join').send({ email: 'student@tutor.com' });
-    await request(app).post('/api/queue/1/serve');
+    await request(app).post('/api/queue/1/join')
+      .set('x-user-email', 'student@tutor.com')
+      .send({ email: 'student@tutor.com' });
+
+    await request(app)
+      .post('/api/queue/1/serve')
+      .set('x-user-email', 'admin@tutor.com');
+
     const res = await request(app).get('/api/history/student@tutor.com/stats');
     expect(res.status).toBe(200);
     expect(res.body.stats.totalVisits).toBe(1);
@@ -520,8 +673,14 @@ describe('History Module', () => {
   });
 
   test('filters history by status', async () => {
-    await request(app).post('/api/queue/1/join').send({ email: 'student@tutor.com' });
-    await request(app).post('/api/queue/1/serve');
+    await request(app).post('/api/queue/1/join')
+      .set('x-user-email', 'student@tutor.com')
+      .send({ email: 'student@tutor.com' });
+
+    await request(app)
+      .post('/api/queue/1/serve')
+      .set('x-user-email', 'admin@tutor.com');
+
     const res = await request(app).get('/api/history/student@tutor.com?status=served');
     expect(res.body.history[0].status).toBe('served');
   });
@@ -532,16 +691,52 @@ describe('History Module', () => {
   });
 
   test('admin can clear user history', async () => {
-    await request(app).post('/api/queue/1/join').send({ email: 'student@tutor.com' });
-    await request(app).post('/api/queue/1/serve');
-    await request(app).delete('/api/history/student@tutor.com');
+    await request(app).post('/api/queue/1/join')
+      .set('x-user-email', 'student@tutor.com')
+      .send({ email: 'student@tutor.com' });
+
+    await request(app)
+      .post('/api/queue/1/serve')
+      .set('x-user-email', 'admin@tutor.com');
+
+    await request(app)
+      .delete('/api/history/student@tutor.com')
+      .set('x-user-email', 'admin@tutor.com');
+
     const res = await request(app).get('/api/history/student@tutor.com');
     expect(res.body.history).toHaveLength(0);
   });
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// SECTION 8 — HEALTH CHECK & 404
+// SECTION 8 — AUTHORIZATION
+// ═══════════════════════════════════════════════════════════════════════════════
+describe('Authorization', () => {
+  test('blocks student from creating a service', async () => {
+    const res = await request(app)
+      .post('/api/services')
+      .set('x-user-email', 'student@tutor.com')
+      .send({
+        name: 'Physics Help',
+        description: 'Lab support',
+        expectedDuration: 30
+      });
+
+    expect(res.status).toBe(403);
+    expect(res.body.success).toBe(false);
+  });
+
+  test('blocks requests with no user header on admin route', async () => {
+    const res = await request(app)
+      .post('/api/queue/1/serve');
+
+    expect(res.status).toBe(401);
+    expect(res.body.success).toBe(false);
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// SECTION 9 — HEALTH CHECK & 404
 // ═══════════════════════════════════════════════════════════════════════════════
 describe('Server Health & Routing', () => {
   test('GET /api/health returns 200', async () => {

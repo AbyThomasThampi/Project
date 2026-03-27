@@ -1,6 +1,6 @@
 // routes/queue.js
 // Queue Management Module + Wait-Time Estimation Logic
-
+const { requireEmail, requireAdmin } = require('../middleware/authz');
 const express = require('express');
 const router  = express.Router();
 const store   = require('../store/dataStore');
@@ -28,7 +28,7 @@ function ensureQueue(serviceId) {
 
 // ── GET /api/queue/:serviceId ─────────────────────────────────────────────────
 // View current queue for a service (admin)
-router.get('/:serviceId', (req, res) => {
+router.get('/:serviceId',requireAdmin, (req, res) => {
   const serviceId = parseInt(req.params.serviceId, 10);
   const service   = store.services.find(s => s.id === serviceId);
   if (!service) {
@@ -58,7 +58,7 @@ router.get('/:serviceId', (req, res) => {
 // ── POST /api/queue/:serviceId/join ───────────────────────────────────────────
 // User joins a queue
 // Body: { email }
-router.post('/:serviceId/join', (req, res) => {
+router.post('/:serviceId/join', requireEmail, (req, res) => {
   const serviceId = parseInt(req.params.serviceId, 10);
   const { email } = req.body;
 
@@ -113,7 +113,7 @@ router.post('/:serviceId/join', (req, res) => {
 // ── DELETE /api/queue/:serviceId/leave ────────────────────────────────────────
 // User leaves a queue
 // Body: { email }
-router.delete('/:serviceId/leave', (req, res) => {
+router.delete('/:serviceId/leave', requireEmail, (req, res) => {
   const serviceId   = parseInt(req.params.serviceId, 10);
   const { email }   = req.body;
 
@@ -148,7 +148,7 @@ router.delete('/:serviceId/leave', (req, res) => {
 
 // ── POST /api/queue/:serviceId/serve ─────────────────────────────────────────
 // Admin: serve the next user in queue
-router.post('/:serviceId/serve', (req, res) => {
+router.post('/:serviceId/serve',requireAdmin, (req, res) => {
   const serviceId = parseInt(req.params.serviceId, 10);
   const service   = store.services.find(s => s.id === serviceId);
   if (!service) {
@@ -188,7 +188,7 @@ router.post('/:serviceId/serve', (req, res) => {
 // ── PATCH /api/queue/:serviceId/priority ─────────────────────────────────────
 // Admin: change a user's priority
 // Body: { email, priority }
-router.patch('/:serviceId/priority', (req, res) => {
+router.patch('/:serviceId/priority',requireAdmin, (req, res) => {
   const serviceId = parseInt(req.params.serviceId, 10);
   const { email, priority } = req.body;
 
@@ -211,7 +211,7 @@ router.patch('/:serviceId/priority', (req, res) => {
 // ── PATCH /api/queue/:serviceId/reorder ──────────────────────────────────────
 // Admin: move an entry from one index to another
 // Body: { fromIndex, toIndex }
-router.patch('/:serviceId/reorder', (req, res) => {
+router.patch('/:serviceId/reorder',requireAdmin, (req, res) => {
   const serviceId = parseInt(req.params.serviceId, 10);
   const { fromIndex, toIndex } = req.body;
 
@@ -233,7 +233,7 @@ router.patch('/:serviceId/reorder', (req, res) => {
 
 // ── GET /api/queue/:serviceId/wait ────────────────────────────────────────────
 // Wait-time estimate for the next person joining
-router.get('/:serviceId/wait', (req, res) => {
+router.get('/:serviceId/wait', requireEmail, (req, res) => {
   const serviceId = parseInt(req.params.serviceId, 10);
   const service   = store.services.find(s => s.id === serviceId);
   if (!service) {

@@ -1,6 +1,6 @@
 // routes/services.js
 // Service Management Module: create, read, update, delete services
-
+const { requireAdmin } = require('../middleware/authz');
 const express = require('express');
 const router  = express.Router();
 const store   = require('../store/dataStore');
@@ -26,7 +26,7 @@ router.get('/:id', (req, res) => {
 // ── POST /api/services ───────────────────────────────────────────────────────
 // Create a new service
 // Body: { name, description, expectedDuration, priority? }
-router.post('/', validate(validateService), (req, res) => {
+router.post('/', requireAdmin, validate(validateService), (req, res) => {
   const { name, description, expectedDuration, priority = 'medium' } = req.body;
 
   const newService = {
@@ -51,7 +51,7 @@ router.post('/', validate(validateService), (req, res) => {
 // ── PUT /api/services/:id ────────────────────────────────────────────────────
 // Update an existing service
 // Body: { name?, description?, expectedDuration?, priority? }
-router.put('/:id', (req, res) => {
+router.put('/:id',requireAdmin, (req, res) => {
   const id      = parseInt(req.params.id, 10);
   const service = store.services.find(s => s.id === id);
   if (!service) {
@@ -99,7 +99,7 @@ router.put('/:id', (req, res) => {
 
 // ── DELETE /api/services/:id ─────────────────────────────────────────────────
 // Delete a service and its queue
-router.delete('/:id', (req, res) => {
+router.delete('/:id',requireAdmin, (req, res) => {
   const id  = parseInt(req.params.id, 10);
   const idx = store.services.findIndex(s => s.id === id);
   if (idx === -1) {
