@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>QueueSmart Tutor – My Queue</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="main-header">
+    <div class="logo">QueueSmart Tutor</div>
+    <nav class="nav-links">
+      <a href="dashboard.html" class="nav-link">Dashboard</a>
+      <a href="join-queue.html" class="nav-link">Join Queue</a>
+      <a href="queue-status.html" class="nav-link">My Queue</a>
+      <a href="user-history.html" class="nav-link">History</a>
+    </nav>
+    <div class="user-section">
+      <span id="user-email"></span>
+      <span id="role-badge" class="role-badge"></span>
+      <button onclick="logout()" class="logout-btn">Logout</button>
+    </div>
+  </header>
+
+  <div class="container-full">
+    <div class="card">
+      <div class="card-title">My Active Queues</div>
+      <div id="my-queues-container"></div>
+    </div>
+  </div>
+
+  <script src="api.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', async function () {   // ← Added "async" here
+
+    const user = checkAuth();
+    if (!user) return;
+
+    document.getElementById('user-email').textContent = user.email;
+    const badge = document.getElementById('role-badge');
+    badge.textContent = user.role === 'admin' ? 'ADMIN' : 'STUDENT';
+    badge.className = `role-badge ${user.role === 'admin' ? 'role-admin' : 'role-user'}`;
+
+    // Wait for data to load from backend
+    await loadData();
+    await refreshAllQueues();
+
+    function renderMyQueues() {
+      const container = document.getElementById('my-queues-container');
+      container.innerHTML = '';
+
+      let hasQueue = false;
+
+      services.forEach(service => {
+        const q = getQueue(service.id);
+        const idx = q.findIndex(entry => entry.email === user.email);
+        if (idx === -1) return;
+
+        hasQueue = true;
+        const position = idx + 1;
+        const wait = calculateWait(service.id, position);
+
+        const card = document.createElement('div');
+        card.className = 'card';
+        card.style.marginBottom = '1.5rem';
+        card.innerHTML = `
+          <h3>${service.name}</h3>
+          <div style="display:flex;gap:2rem;margin:1.25rem 0">
+            <div>
+              <div style="font-size:3rem;font-weight:800;color:var(--color-accent)">#${position}</div>
+              <div style="color:#6b7280">Your position</div>
+            </div>
+            <div>
+              <div style="font-size:2.25rem;font-weight:700">${wait} min</div>
+              <div style="color:#6b7280">Estimated wait</div>
+            </div>
+          </div>
+          <button onclick="leaveQueue(${service.id}, '${user.email}');setTimeout(()=>location.reload(),800)" 
+                  class="btn-danger action-btn" style="width:100%">Leave Queue</button>
+        `;
+        container.appendChild(card);
+      });
+
+      if (!hasQueue) {
+        container.innerHTML = `<p style="text-align:center;padding:3rem;color:#6b7280">You are not in any queue.<br><a href="join-queue.html" style="color:var(--color-accent)">Join one now →</a></p>`;
+      }
+    }
+
+    renderMyQueues();
+});
+</script>
+</body>
+</html>

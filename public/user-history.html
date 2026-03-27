@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>QueueSmart Tutor - My History</title>
+    <link rel="stylesheet" href="styles.css" />
+    
+    <!-- Stats Cards Style -->
+    <style>
+        .history-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+        .stat-card {
+            background: linear-gradient(135deg, var(--color-primary) 0%, #f8fafc 100%);
+            padding: 1.5rem;
+            border-radius: var(--radius);
+            text-align: center;
+            box-shadow: var(--shadow-sm);
+            transition: transform 0.2s ease; 
+        }
+        .stat-card:hover { transform: translateY(-2px); }
+        .stat-value {
+            font-size: 2.5rem;
+            font-weight: 800;
+            color: var(--color-accent);
+            margin-bottom: 0.5rem;
+        }
+        .stat-label {
+            color: var(--color-placeholder);
+            font-size: 0.95rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            font-weight: 500;
+        }
+    </style>
+
+    <!-- Filter & Table Styles (unchanged) -->
+    <style>
+        .filter-bar {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 2rem;
+            flex-wrap: wrap;
+            align-items: center;
+            background: var(--color-primary);
+            padding: 1.5rem;
+            border-radius: var(--radius);
+            border: 1px solid var(--color-border);
+        }
+        .filter-select, .filter-input {
+            padding: 0.75rem;
+            border: 1px solid var(--color-border);
+            border-radius: var(--radius);
+            font-size: 0.95rem;
+            min-width: 200px;
+            background: var(--color-primary);
+        }
+        .filter-select:focus, .filter-input:focus {
+            outline: none;
+            border-color: var(--color-accent);
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+        .filter-btn {
+            padding: 0.75rem 1.5rem;
+            background: var(--color-accent);
+            color: white;
+            border: none;
+            border-radius: var(--radius);
+            cursor: pointer;
+            font-weight: 500;
+        }
+        .filter-btn:hover { background: #1d4ed8; }
+        .filter-btn.reset { background: var(--color-placeholder); }
+        .filter-btn.reset:hover { background: #4b5563; }
+        .clear-history-btn {
+            background: var(--color-danger);
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: var(--radius);
+            cursor: pointer;
+            font-weight: 500;
+            margin-left: auto;
+        }
+        .clear-history-btn:hover { background: #dc2626; }
+
+        .table-container { overflow-x: auto; border-radius: var(--radius); }
+        .history-table { width: 100%; border-collapse: collapse; background: var(--color-primary); }
+        .history-table th {
+            background: #f8fafc;
+            padding: 1rem;
+            text-align: left;
+            font-weight: 600;
+            color: var(--color-placeholder);
+            border-bottom: 2px solid var(--color-border);
+        }
+        .history-table td {
+            padding: 1rem;
+            border-bottom: 1px solid var(--color-border);
+        }
+        .status-badge {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.85rem;
+            font-weight: 500;
+            text-transform: capitalize;
+        }
+        .status-completed { background: #d1fae5; color: #065f46; }
+        .status-served { background: #dbeafe; color: #1e40af; }
+        .status-left { background: #fee2e2; color: #b91c1c; }
+        .wait-time { font-weight: 600; color: var(--color-accent); }
+        .no-history {
+            text-align: center;
+            padding: 4rem;
+            color: var(--color-placeholder);
+            background: #f8fafc;
+            border-radius: var(--radius);
+            font-size: 1.1rem;
+        }
+        .history-table tbody tr:hover { background: #f8fafc; }
+    </style>
+</head>
+<body>
+
+    <!-- Dynamic Header -->
+    <header class="main-header">
+        <div class="logo">
+            QueueSmart Tutor 
+            <span id="role-indicator" style="font-size:0.9rem;color:#ef4444"></span>
+        </div>
+        
+        <nav class="nav-links" id="dynamic-nav">
+            <!-- Populated dynamically by JavaScript -->
+        </nav>
+
+        <div class="user-section">
+            <span id="user-email"></span>
+            <span id="role-badge" class="role-badge"></span>
+            <button onclick="logout()" class="logout-btn">Logout</button>
+        </div>
+    </header>
+
+    <div class="container-full">
+        <h1>My Queue History</h1>
+        
+        <!-- Statistics Cards -->
+        <div class="history-stats">
+            <div class="stat-card">
+                <div class="stat-value" id="total-visits">0</div>
+                <div class="stat-label">Total Visits</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="avg-wait">0</div>
+                <div class="stat-label">Avg. Wait (min)</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="completed-visits">0</div>
+                <div class="stat-label">Completed</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="left-early">0</div>
+                <div class="stat-label">Left Early</div>
+            </div>
+        </div>
+
+        <!-- Filters -->
+        <div class="card">
+            <div class="card-title">
+                History Filters
+                <button onclick="clearFilters()" class="filter-btn reset">Reset Filters</button>
+            </div>
+            <div class="filter-bar">
+                <select id="status-filter" class="filter-select">
+                    <option value="">All Statuses</option>
+                    <option value="completed">Completed</option>
+                    <option value="served">Served</option>
+                    <option value="left">Left Early</option>
+                </select>
+    
+                <select id="service-filter" class="filter-select">
+                    <option value="">All Services</option>
+                </select>
+    
+                <input type="date" id="date-from" class="filter-input">
+                <input type="date" id="date-to" class="filter-input">
+    
+                <button onclick="applyFilters()" class="filter-btn">Apply Filters</button>
+    
+                <button onclick="clearAllHistory()" class="clear-history-btn" id="clear-history-btn" style="display: none;">
+                    Clear All History
+                </button>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-title">Queue History</div>
+            <div class="table-container">
+                <table class="history-table" id="history-table">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Service</th>
+                            <th>Status</th>
+                            <th>Wait Time</th>
+                            <th>Joined</th>
+                            <th>Completed</th>
+                        </tr>
+                    </thead>
+                    <tbody id="history-body">
+                        <tr><td colspan="6" class="no-history">Loading history...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+  <script src="api.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', async function() {
+
+    const user = checkAuth();
+    if (!user) return;
+
+    document.getElementById('user-email').textContent = user.email;
+    const badge = document.getElementById('role-badge');
+    badge.textContent = user.role === 'admin' ? 'ADMIN' : 'STUDENT';
+    badge.className = `role-badge ${user.role === 'admin' ? 'role-admin' : 'role-user'}`;
+
+    renderDynamicNav(user);
+
+    if (user.role === "admin") {
+        document.getElementById('clear-history-btn').style.display = 'block';
+    }
+
+    await loadData();
+    await refreshAllQueues();
+
+    // Populate service filter
+    const serviceFilter = document.getElementById('service-filter');
+    services.forEach(s => {
+        const opt = document.createElement('option');
+        opt.value = s.id;
+        opt.textContent = s.name;
+        serviceFilter.appendChild(opt);
+    });
+
+    // Default date range
+    const today = new Date();
+    const thirtyDaysAgo = new Date(today);
+    thirtyDaysAgo.setDate(today.getDate() - 30);
+    document.getElementById('date-to').valueAsDate = today;
+    document.getElementById('date-from').valueAsDate = thirtyDaysAgo;
+
+    // Load and show history
+    await loadAndRenderHistory(user);
+});
+
+// Dynamic Nav
+function renderDynamicNav(user) {
+    const nav = document.getElementById('dynamic-nav');
+    if (user.role === 'admin') {
+        nav.innerHTML = `
+            <a href="admin-dashboard.html" class="nav-link">Dashboard</a>
+            <a href="admin-services.html" class="nav-link">Services</a>
+            <a href="admin-queue-manage.html" class="nav-link">Queue Management</a>
+            <a href="user-history.html" class="nav-link" style="color: var(--color-accent); font-weight: 700;">History</a>
+        `;
+        document.getElementById('role-indicator').textContent = '(ADMIN)';
+    } else {
+        nav.innerHTML = `
+            <a href="dashboard.html" class="nav-link">Dashboard</a>
+            <a href="join-queue.html" class="nav-link">Join Queue</a>
+            <a href="queue-status.html" class="nav-link">My Queue</a>
+            <a href="user-history.html" class="nav-link" style="color: var(--color-accent); font-weight: 700;">History</a>
+        `;
+        document.getElementById('role-indicator').textContent = '';
+    }
+}
+
+async function loadAndRenderHistory(user) {
+    console.log("Fetching history for:", user.email, "role:", user.role);
+
+    const filters = getCurrentFilters();
+
+    // NEW: Admin sees EVERYTHING
+    if (user.role === 'admin') {
+        filters.all = true;
+    }
+
+    const historyData = await getUserHistory(user.email, filters);
+
+    console.log("📥 History data received from backend:", historyData.length, "entries");
+    console.table(historyData);
+
+    updateStats(historyData, historyData);
+    renderHistoryTable(historyData);
+}
+function getCurrentFilters() {
+    return {
+        status: document.getElementById('status-filter').value,
+        serviceId: document.getElementById('service-filter').value ? 
+                   parseInt(document.getElementById('service-filter').value) : null,
+        startDate: document.getElementById('date-from').value,
+        endDate: document.getElementById('date-to').value
+    };
+}
+
+function applyFiltersToHistory(history, filters) {
+    return history.filter(entry => {
+        if (filters.status && entry.status !== filters.status) return false;
+        if (filters.serviceId && entry.serviceId !== filters.serviceId) return false;
+        if (filters.startDate && new Date(entry.completedAt) < new Date(filters.startDate)) return false;
+        if (filters.endDate) {
+            const end = new Date(filters.endDate);
+            end.setHours(23, 59, 59, 999);
+            if (new Date(entry.completedAt) > end) return false;
+        }
+        return true;
+    });
+}
+
+function updateStats(allHistory, filteredHistory) {
+    const total = filteredHistory.length;
+    const completed = filteredHistory.filter(h => h.status === 'completed' || h.status === 'served').length;
+    const left = filteredHistory.filter(h => h.status === 'left').length;
+    const avgWait = filteredHistory.length > 0 
+        ? Math.round(filteredHistory.reduce((sum, h) => sum + (h.waitTimeMinutes || 0), 0) / filteredHistory.length) 
+        : 0;
+
+    document.getElementById('total-visits').textContent = total;
+    document.getElementById('avg-wait').textContent = avgWait;
+    document.getElementById('completed-visits').textContent = completed;
+    document.getElementById('left-early').textContent = left;
+}
+
+function renderHistoryTable(history) {
+    const tbody = document.getElementById('history-body');
+
+    if (history.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" class="no-history">No history found with current filters</td></tr>';
+        return;
+    }
+
+    tbody.innerHTML = history.map(entry => {
+        const joined = new Date(entry.joinedAt);
+        const completed = new Date(entry.completedAt);
+        const statusDisplay = entry.status.charAt(0).toUpperCase() + entry.status.slice(1);
+
+        return `
+            <tr>
+                <td>${completed.toLocaleDateString()}</td>
+                <td><strong>${entry.serviceName}</strong></td>
+                <td><span class="status-badge status-${entry.status}">${statusDisplay}</span></td>
+                <td><span class="wait-time">${entry.waitTimeMinutes || 0} min</span></td>
+                <td>${joined.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</td>
+                <td>${completed.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</td>
+            </tr>`;
+    }).join('');
+}
+
+// Button handlers
+function applyFilters() {
+    const user = checkAuth();
+    if (user) loadAndRenderHistory(user);
+}
+
+function clearFilters() {
+    document.getElementById('status-filter').value = '';
+    document.getElementById('service-filter').value = '';
+    
+    const today = new Date();
+    const thirtyDaysAgo = new Date(today);
+    thirtyDaysAgo.setDate(today.getDate() - 30);
+    
+    document.getElementById('date-to').valueAsDate = today;
+    document.getElementById('date-from').valueAsDate = thirtyDaysAgo;
+
+    const user = checkAuth();
+    if (user) loadAndRenderHistory(user);
+}
+
+async function clearAllHistory() {
+    const user = checkAuth();
+    if (!user || user.role !== 'admin') {
+        showToast('Only admins can clear history', 'error');
+        return;
+    }
+
+    if (confirm('Are you sure you want to clear ALL history? This cannot be undone.')) {
+        const success = await clearUserHistory(user.email);
+        if (success) {
+            showToast('History cleared successfully', 'success');
+            loadAndRenderHistory(user);
+        }
+    }
+}
+</script>
+</body>
+</html>

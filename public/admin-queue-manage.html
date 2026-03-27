@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>QueueSmart Tutor – Queue Management</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="main-header">
+    <div class="logo">QueueSmart Tutor <span style="font-size:0.9rem;color:#ef4444">(ADMIN)</span></div>
+    <nav class="nav-links">
+      <a href="admin-dashboard.html" class="nav-link">Dashboard</a>
+      <a href="admin-services.html" class="nav-link">Services</a>
+      <a href="admin-queue-manage.html" class="nav-link">Queue Management</a>
+      <a href="user-history.html" class="nav-link">History</a>
+    </nav>
+    <div class="user-section">
+      <span id="user-email"></span>
+      <span class="role-badge role-admin">ADMIN</span>
+      <button onclick="logout()" class="logout-btn">Logout</button>
+    </div>
+  </header>
+
+  <div class="container-full">
+    <div class="card">
+      <div class="card-title">Manage Queue</div>
+      
+      <!-- Dropdown with live queue count -->
+      <select id="admin-service-select" class="input-field" style="margin-bottom:1.5rem"></select>
+
+      <div class="table-container">
+        <table id="queue-table">
+          <thead>
+            <tr>
+              <th>Position</th>
+              <th>Student</th>
+              <th>Priority</th>
+              <th>Joined</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+
+      <button onclick="serveNextForSelected()" class="btn-success action-btn" style="margin-top:1rem">
+        Serve Next Student
+      </button>
+    </div>
+  </div>
+
+<script src="api.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', async function () {
+
+    const user = checkAuth('admin');
+    if (!user) return;
+
+    await loadData();
+    await refreshAllQueues();
+
+    document.getElementById('user-email').textContent = user.email;
+
+    const select = document.getElementById('admin-service-select');
+
+    // Populate dropdown with current queue count
+    function populateDropdown() {
+    const select = document.getElementById('admin-service-select');
+    select.innerHTML = '';
+    services.forEach(s => {
+        const count = getQueue(s.id).length;
+        const opt = document.createElement('option');
+        opt.value = s.id;
+        opt.textContent = `${s.name} (${count} in queue)`;
+        select.appendChild(opt);
+    });
+}
+
+async function renderQueueTable() {
+    const serviceId = parseInt(select.value);
+    const tbody = document.querySelector('#queue-table tbody');
+
+    const q = getQueue(serviceId);
+    
+    tbody.innerHTML = '';
+
+    if (q.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;padding:2rem">Queue is empty</td></tr>`;
+        return;
+    }
+
+    q.forEach((entry, idx) => {
+        const tr = document.createElement('tr');
+        const joined = new Date(entry.joinedAt).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+
+        tr.innerHTML = `
+            <td><strong>#${idx+1}</strong></td>
+            <td>${entry.email}</td>
+            <td>
+                <select onchange="handlePriorityChange(${serviceId}, '${entry.email}', this.value)" class="input-field" style="width:auto;height:34px">
+                    <option value="low" ${entry.priority==='low'?'selected':''}>Low</option>
+                    <option value="medium" ${entry.priority==='medium'?'selected':''}>Medium</option>
+                    <option value="high" ${entry.priority==='high'?'selected':''}>High</option>
+                </select>
+            </td>
+            <td>${joined}</td>
+            <td>
+                <button onclick="handleReorder(${serviceId}, ${idx}, ${idx-1})" class="action-btn btn-secondary" ${idx===0?'disabled':''}>↑</button>
+                <button onclick="handleReorder(${serviceId}, ${idx}, ${idx+1})" class="action-btn btn-secondary" ${idx===q.length-1?'disabled':''}>↓</button>
+                <button onclick="handleLeave(${serviceId}, '${entry.email}')" class="btn-danger action-btn">Remove</button>
+            </td>
+        `;
+        tbody.appendChild(tr);
+    });
+}
+
+    // ====================== ACTION HANDLERS ======================
+
+    window.serveNextForSelected = async function() {
+        const serviceId = parseInt(select.value);
+        await serveNext(serviceId);
+        await refreshQueue(serviceId);
+        populateDropdown();
+        renderQueueTable();
+    };
+
+    async function handlePriorityChange(serviceId, email, newPriority) {
+        await changePriority(serviceId, email, newPriority);
+        await refreshQueue(serviceId);
+        renderQueueTable();
+    }
+
+    async function handleLeave(serviceId, email) {
+        await leaveQueue(serviceId, email);
+        await refreshQueue(serviceId);
+        populateDropdown();
+        renderQueueTable();
+    }
+
+    // REORDER - Now with immediate refresh
+    async function handleReorder(serviceId, fromIdx, toIdx) {
+        if (fromIdx === toIdx || fromIdx < 0 || toIdx < 0) return;
+
+        // Call reorder
+        await reorderQueue(serviceId, fromIdx, toIdx);
+
+        // Refresh the specific queue and re-render
+        await refreshQueue(serviceId);
+        renderQueueTable();
+
+        // Optional: small success message
+        showToast('Queue reordered successfully', 'success');
+    }
+
+    // Event listeners
+    select.addEventListener('change', renderQueueTable);
+
+    // Initial load
+    populateDropdown();
+    renderQueueTable();
+});
+</script>
+</body>
+</html>
