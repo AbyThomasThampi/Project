@@ -200,6 +200,16 @@ async function leaveQueue(serviceId, userEmail) {
   }
 }
 
+async function refreshPageHistory() {
+  if (window.location.pathname.endsWith('user-history.html')) {
+    const user = checkAuth();
+    if (user && typeof loadAndRenderHistory === 'function') {
+      await loadAndRenderHistory(user);
+    }
+  }
+}
+
+
 async function serveNext(serviceId) {
   const res  = await fetch(`${API_BASE}/queue/${serviceId}/serve`, {
     method: 'POST',
@@ -209,13 +219,7 @@ async function serveNext(serviceId) {
   if (data.success) {
     showToast(data.message, 'success');
     await refreshQueue(serviceId);
-
-    if (window.location.pathname.endsWith('user-history.html')) {
-      const user = checkAuth();
-      if (user && typeof loadAndRenderHistory === 'function') {
-        await loadAndRenderHistory(user);
-      }
-    }
+    await refreshPageHistory();
   } else {
     showToast(data.errors?.[0] || 'Queue is empty', 'error');
   }
@@ -388,11 +392,18 @@ async function getUserHistory(userEmail, filter = {}) {
   if (filter.endDate)   params.append('endDate',   filter.endDate);
   if (filter.all !== undefined) params.append('all', filter.all);
 
+  const url = `${API_BASE}/history/${encodeURIComponent(userEmail)}?${params}`;
+  console.log('getUserHistory', url);
+
   try {
-    const res  = await fetch(`${API_BASE}/history/${encodeURIComponent(userEmail)}?${params}`);
+    const res  = await fetch(url);
     const data = await res.json();
+    console.log('getUserHistory response', data);
     return data.success ? data.history : [];
-  } catch { return []; }
+  } catch (err) {
+    console.error('getUserHistory error', err);
+    return [];
+  }
 }
 
 async function getHistoryStats(userEmail) {

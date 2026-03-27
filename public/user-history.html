@@ -282,7 +282,7 @@ function renderDynamicNav(user) {
     }
 }
 
-async function loadAndRenderHistory(user) {
+window.loadAndRenderHistory = async function(user) {
     console.log("Fetching history for:", user.email, "role:", user.role);
 
     const filters = getCurrentFilters();
@@ -299,7 +299,7 @@ async function loadAndRenderHistory(user) {
 
     updateStats(historyData, historyData);
     renderHistoryTable(historyData);
-}
+};
 function getCurrentFilters() {
     return {
         status: document.getElementById('status-filter').value,
