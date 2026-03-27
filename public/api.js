@@ -59,6 +59,14 @@ function isValidEmail(email) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }
 
+function getAuthHeaders(withJson = true) {
+  const user = JSON.parse(localStorage.getItem(CURRENT_USER_KEY) || 'null');
+  const headers = {};
+  if (withJson) headers['Content-Type'] = 'application/json';
+  if (user?.email) headers['x-user-email'] = user.email;
+  return headers;
+}
+
 // ═══════════════════════════════════════════════════════════════════════════════
 // AUTH
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -155,7 +163,7 @@ function getQueue(serviceId) {
 async function addToQueue(serviceId, userEmail) {
   const res  = await fetch(`${API_BASE}/queue/${serviceId}/join`, {
     method:  'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: getAuthHeaders(true),
     body:    JSON.stringify({ email: userEmail })
   });
   const data = await res.json();
@@ -172,7 +180,7 @@ async function addToQueue(serviceId, userEmail) {
 async function leaveQueue(serviceId, userEmail) {
   const res  = await fetch(`${API_BASE}/queue/${serviceId}/leave`, {
     method:  'DELETE',
-    headers: { 'Content-Type': 'application/json' },
+    headers: getAuthHeaders(true),
     body:    JSON.stringify({ email: userEmail })
   });
   const data = await res.json();
@@ -187,7 +195,7 @@ async function leaveQueue(serviceId, userEmail) {
 async function serveNext(serviceId) {
   const res  = await fetch(`${API_BASE}/queue/${serviceId}/serve`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' }
+    headers: getAuthHeaders(true)
   });
   const data = await res.json();
   if (data.success) {
@@ -201,7 +209,7 @@ async function serveNext(serviceId) {
 async function changePriority(serviceId, userEmail, newPriority) {
   const res  = await fetch(`${API_BASE}/queue/${serviceId}/priority`, {
     method:  'PATCH',
-    headers: { 'Content-Type': 'application/json' },
+    headers: getAuthHeaders(true),
     body:    JSON.stringify({ email: userEmail, priority: newPriority })
   });
   const data = await res.json();
@@ -213,7 +221,7 @@ async function reorderQueue(serviceId, fromIdx, toIdx) {
   try {
     const res = await fetch(`${API_BASE}/queue/${serviceId}/reorder`, {
       method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
+      headers: getAuthHeaders(true),
       body: JSON.stringify({ 
         fromIndex: fromIdx, 
         toIndex: toIdx 
@@ -267,7 +275,7 @@ function calculateWait(serviceId, position) {
 // Refresh local cache for one queue from the backend
 async function refreshQueue(serviceId) {
   try {
-    const res  = await fetch(`${API_BASE}/queue/${serviceId}`);
+    const res  = await fetch(`${API_BASE}/queue/${serviceId}`, { headers: getAuthHeaders(false) });
     const data = await res.json();
     if (data.success) queues[serviceId] = data.queue;
   } catch (e) { /* offline */ }

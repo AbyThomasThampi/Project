@@ -27,8 +27,8 @@ function ensureQueue(serviceId) {
 }
 
 // ── GET /api/queue/:serviceId ─────────────────────────────────────────────────
-// View current queue for a service (admin)
-router.get('/:serviceId',requireAdmin, (req, res) => {
+// View current queue for a service
+router.get('/:serviceId', requireEmail, (req, res) => {
   const serviceId = parseInt(req.params.serviceId, 10);
   const service   = store.services.find(s => s.id === serviceId);
   if (!service) {
