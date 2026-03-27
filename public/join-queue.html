@@ -85,10 +85,12 @@ document.addEventListener('DOMContentLoaded', async function () {
   select.addEventListener('change', updateServiceDetails);
   updateServiceDetails();   // show details for first service
 
-  window.joinSelectedQueue = function() {
+  window.joinSelectedQueue = async function() {
     const serviceId = parseInt(select.value);
-    addToQueue(serviceId, user.email);
-    setTimeout(() => location.href = 'queue-status.html', 1200);
+    const success = await addToQueue(serviceId, user.email);
+    if (success) {
+      location.href = 'queue-status.html';
+    }
   };
 
 });

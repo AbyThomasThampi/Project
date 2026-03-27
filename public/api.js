@@ -187,6 +187,14 @@ async function leaveQueue(serviceId, userEmail) {
   if (data.success) {
     showToast('You left the queue', 'info');
     await refreshQueue(serviceId);
+
+    // Refresh history view if currently displayed
+    if (window.location.pathname.endsWith('user-history.html')) {
+      const user = checkAuth();
+      if (user && typeof loadAndRenderHistory === 'function') {
+        await loadAndRenderHistory(user);
+      }
+    }
   } else {
     showToast(data.errors?.[0] || 'Could not leave queue', 'error');
   }
@@ -201,6 +209,13 @@ async function serveNext(serviceId) {
   if (data.success) {
     showToast(data.message, 'success');
     await refreshQueue(serviceId);
+
+    if (window.location.pathname.endsWith('user-history.html')) {
+      const user = checkAuth();
+      if (user && typeof loadAndRenderHistory === 'function') {
+        await loadAndRenderHistory(user);
+      }
+    }
   } else {
     showToast(data.errors?.[0] || 'Queue is empty', 'error');
   }
