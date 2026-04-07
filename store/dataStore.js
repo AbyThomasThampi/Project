@@ -13,7 +13,7 @@ const store = {
   //],
   
   // New MySQL users functions
-  async getUsers() {
+  async listUsers() {
     const [rows] = await db.execute('SELECT * FROM users');
     return rows;
   },
@@ -57,7 +57,7 @@ const store = {
     return rows[0];
   },
 
-  async addService(service) {
+  async createService(service) {
     const { name, description, expectedDuration, priority } = service;
 
     const [result] = await db.execute(
@@ -166,13 +166,18 @@ const store = {
     return { id: result.insertId };
   },
 
-  async getNotifications(email, limit = 10) {
-    const [rows] = await db.execute(
-      `SELECT * FROM notifications
+  async getUnreadNotifications(email, limit = 10) {
+    if (!email) throw new Error('email is required');
+
+    const safeLimit = Math.max(1, Math.min(100, Number(limit) || 10)); // between 1 and 100
+
+    const query = `
+      SELECT * FROM notifications
       WHERE userEmail = ? AND isRead = false
-      LIMIT ?`,
-      [email, limit]
-    );
+      LIMIT ${safeLimit}  -- inject directly
+    `;
+
+    const [rows] = await db.execute(query, [email]);
     return rows;
   },
 
@@ -207,10 +212,16 @@ const store = {
   async addHistory(entry) {
     const { email, serviceId, status } = entry;
 
+    const [serviceRow] = await db.execute(
+      `SELECT name FROM services WHERE id = ?`,
+      [serviceId]
+    );
+    const serviceName = serviceRow[0].name;
+    
     await db.execute(
-      `INSERT INTO history (email, serviceId, status, timestamp)
-      VALUES (?, ?, ?, NOW())`,
-      [email, serviceId, status]
+      `INSERT INTO history (email, serviceId, serviceName, status, joinedAt)
+      VALUES (?, ?, ?, ?, NOW())`,
+      [email, serviceId, serviceName, status]
     );
   },
 

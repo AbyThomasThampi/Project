@@ -8,38 +8,36 @@ const { validateService, validate } = require('../middleware/validate');
 
 // ── GET /api/services ────────────────────────────────────────────────────────
 // List all services
-router.get('/', (req, res) => {
-  return res.status(200).json({ success: true, services: store.services });
+router.get('/', async (req, res) => {
+  const services = await store.getServices();
+  return res.status(200).json({ success: true, services });
 });
 
 // ── GET /api/services/:id ────────────────────────────────────────────────────
 // Get a single service by ID
-router.get('/:id', (req, res) => {
+router.get('/:id', async (req, res) => {
   const id      = parseInt(req.params.id, 10);
-  const service = store.services.find(s => s.id === id);
+  const service = await store.getServiceById(id);
+
   if (!service) {
     return res.status(404).json({ success: false, errors: ['Service not found'] });
   }
+
   return res.status(200).json({ success: true, service });
 });
 
 // ── POST /api/services ───────────────────────────────────────────────────────
 // Create a new service
 // Body: { name, description, expectedDuration, priority? }
-router.post('/', requireAdmin, validate(validateService), (req, res) => {
+router.post('/', requireAdmin, validate(validateService), async (req, res) => {
   const { name, description, expectedDuration, priority = 'medium' } = req.body;
 
-  const newService = {
-    id:               store.nextServiceId(),
+  const newService = await store.createService({
     name:             name.trim(),
     description:      description.trim(),
     expectedDuration: parseInt(expectedDuration, 10),
     priority
-  };
-
-  store.services.push(newService);
-  // Initialize an empty queue for this service
-  store.queues[newService.id] = [];
+  });
 
   return res.status(201).json({
     success: true,
@@ -51,13 +49,14 @@ router.post('/', requireAdmin, validate(validateService), (req, res) => {
 // ── PUT /api/services/:id ────────────────────────────────────────────────────
 // Update an existing service
 // Body: { name?, description?, expectedDuration?, priority? }
-router.put('/:id',requireAdmin, (req, res) => {
+router.put('/:id',requireAdmin, async (req, res) => {
   const id      = parseInt(req.params.id, 10);
-  const service = store.services.find(s => s.id === id);
-  if (!service) {
-    return res.status(404).json({ success: false, errors: ['Service not found'] });
+  
+  const existing = await store.getServiceById(id);
+  if (!existing) {
+    return res.status(404).json({ success: false, errors: ['Service not found'] })
   }
-
+  
   // Validate only the fields that were actually sent
   const patch  = req.body;
   const errors = [];
@@ -88,26 +87,27 @@ router.put('/:id',requireAdmin, (req, res) => {
 
   if (errors.length) return res.status(400).json({ success: false, errors });
 
-  // Apply updates
-  if (patch.name             !== undefined) service.name             = patch.name.trim();
-  if (patch.description      !== undefined) service.description      = patch.description.trim();
-  if (patch.expectedDuration !== undefined) service.expectedDuration = parseInt(patch.expectedDuration, 10);
-  if (patch.priority         !== undefined) service.priority         = patch.priority;
-
-  return res.status(200).json({ success: true, message: 'Service updated', service });
+  const updated = await store.updateService(id, {
+    ...(patch.name !== undefined && { name: patch.name.trim() }),
+    ...(patch.description !== undefined && { description: patch.description.trim() }),
+    ...(patch.expectedDuration !== undefined && { expectedDuration: parseInt(patch.expectedDuration, 10) }),
+    ...(patch.priority !== undefined && { priority: patch.priority })
+  });
+  
+  return res.status(200).json({ success: true, message: 'Service updated', service: updated });
 });
 
 // ── DELETE /api/services/:id ─────────────────────────────────────────────────
 // Delete a service and its queue
-router.delete('/:id',requireAdmin, (req, res) => {
+router.delete('/:id',requireAdmin, async (req, res) => {
   const id  = parseInt(req.params.id, 10);
-  const idx = store.services.findIndex(s => s.id === id);
-  if (idx === -1) {
+  
+  const existing = await store.getServiceById(id);
+  if (!existing) {
     return res.status(404).json({ success: false, errors: ['Service not found'] });
   }
-
-  store.services.splice(idx, 1);
-  delete store.queues[id];
+  
+  await store.deleteService(id);
 
   return res.status(200).json({ success: true, message: 'Service deleted' });
 });

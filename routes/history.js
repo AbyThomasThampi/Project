@@ -4,9 +4,9 @@ const router  = express.Router();
 const store   = require('../store/dataStore');
 
 // ── GET /api/history/:email/stats ─────────────────────────────────────────────
-router.get('/:email/stats', (req, res) => {
+router.get('/:email/stats', async (req, res) => {
   const email   = req.params.email.toLowerCase();
-  const history = store.history.filter(h => h.userEmail === email);
+  const history = await store.getHistory(email);
 
   if (history.length === 0) {
     return res.status(200).json({
@@ -43,11 +43,11 @@ router.get('/:email/stats', (req, res) => {
 
 // ── GET /api/history/:email ───────────────────────────────────────────────────
 // Supports ?all=true for admins (shows every user's history)
-router.get('/:email', (req, res) => {
+router.get('/:email', async (req, res) => {
   const emailParam = req.params.email.toLowerCase();
   const { status, serviceId, startDate, endDate, all } = req.query;
 
-  let history = store.history;
+  let history =  await store.getHistory(emailParam);
 
   // ADMIN GLOBAL VIEW
   if (all !== 'true') {
@@ -94,11 +94,10 @@ router.get('/:email', (req, res) => {
 });
 
 // ── DELETE /api/history/:email ────────────────────────────────────────────────
-router.delete('/:email', (req, res) => {
+router.delete('/:email', async (req, res) => {
   const email  = req.params.email.toLowerCase();
-  const before = store.history.length;
-  store.history = store.history.filter(h => h.userEmail !== email);
-  const removed = before - store.history.length;
+  
+  const removed = await store.clearHistory(email);
   return res.status(200).json({ success: true, message: `Removed ${removed} history entries` });
 });
 

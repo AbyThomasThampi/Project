@@ -8,7 +8,7 @@ const { validateEmail, validatePassword } = require('../middleware/validate');
 
 // ── POST /api/auth/register ──────────────────────────────────────────────────
 // Body: { email, password, role? }   role defaults to 'user'
-router.post('/register', (req, res) => {
+router.post('/register', async (req, res) => {
   const { email, password, role } = req.body;
   const errors = [];
 
@@ -32,18 +32,19 @@ router.post('/register', (req, res) => {
 
   // Duplicate check
   const normalEmail = email.trim().toLowerCase();
-  if (store.users.find(u => u.email === normalEmail)) {
+  const existingUser = await store.getUserByEmail(normalEmail);
+  if (existingUser) {
     return res.status(409).json({ success: false, errors: ['Email already registered'] });
   }
 
   // Create user
-  const newUser = {
-    id:       store.nextUserId(),
+  const newUser = await store.addUser({
+    //id:       store.nextUserId(),
     email:    normalEmail,
     password,           // plain-text for A3; hash in A4+
     role:     assignedRole
-  };
-  store.users.push(newUser);
+  });
+  //store.users.push(newUser);
 
   return res.status(201).json({
     success: true,
@@ -54,7 +55,7 @@ router.post('/register', (req, res) => {
 
 // ── POST /api/auth/login ─────────────────────────────────────────────────────
 // Body: { email, password }
-router.post('/login', (req, res) => {
+router.post('/login', async (req, res) => {
   const { email, password } = req.body;
   const errors = [];
 
@@ -66,9 +67,9 @@ router.post('/login', (req, res) => {
   if (emailErr) return res.status(400).json({ success: false, errors: [emailErr] });
 
   const normalEmail = email.trim().toLowerCase();
-  const user = store.users.find(u => u.email === normalEmail && u.password === password);
-
-  if (!user) {
+  const user = await store.getUserByEmail(normalEmail); 
+  
+  if (!user || user.password !== password) {
     return res.status(401).json({ success: false, errors: ['Invalid email or password'] });
   }
 
@@ -81,8 +82,11 @@ router.post('/login', (req, res) => {
 
 // ── GET /api/auth/users ──────────────────────────────────────────────────────
 // Returns all users (admin use; passwords stripped)
-router.get('/users', (req, res) => {
-  const safeUsers = store.users.map(({ password, ...u }) => u);
+router.get('/users', async (req, res) => {
+  const users = await store.getUsers();
+  
+  const safeUsers = users.map(({ password, ...u}) => u);
+  
   return res.status(200).json({ success: true, users: safeUsers });
 });
 
