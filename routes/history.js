@@ -44,6 +44,7 @@ router.get('/:email/stats', async (req, res) => {
 // ── GET /api/history/:email ───────────────────────────────────────────────────
 // Supports ?all=true for admins (shows every user's history)
 router.get('/:email', async (req, res) => {
+  
   const emailParam = req.params.email.toLowerCase();
   const { status, serviceId, startDate, endDate, all } = req.query;
 
@@ -51,7 +52,7 @@ router.get('/:email', async (req, res) => {
 
   // ADMIN GLOBAL VIEW
   if (all !== 'true') {
-    history = history.filter(h => h.userEmail === emailParam);
+    history = history.filter(h => h.email.toLowerCase() === emailParam);
   }
 
   // Status filter
@@ -74,13 +75,13 @@ router.get('/:email', async (req, res) => {
   if (startDate) {
     const start = new Date(startDate);
     if (isNaN(start)) return res.status(400).json({ success: false, errors: ['Invalid startDate'] });
-    history = history.filter(h => new Date(h.completedAt) >= start);
+    history = history.filter(h => h.completedAt && new Date(h.completedAt) >= start);
   }
   if (endDate) {
     const end = new Date(endDate);
     if (isNaN(end)) return res.status(400).json({ success: false, errors: ['Invalid endDate'] });
     end.setHours(23, 59, 59, 999);
-    history = history.filter(h => new Date(h.completedAt) <= end);
+    history = history.filter(h =>  new Date(h.completedAt) <= end);
   }
 
   // Sort newest first

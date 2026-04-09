@@ -54,6 +54,7 @@ const store = {
       'SELECT * FROM services WHERE id = ?',
       [id]
     );
+
     return rows[0];
   },
 
@@ -210,18 +211,24 @@ const store = {
   },
 
   async addHistory(entry) {
-    const { email, serviceId, status } = entry;
+    const { email, serviceId, status, joinedAt } = entry;
 
     const [serviceRow] = await db.execute(
       `SELECT name FROM services WHERE id = ?`,
       [serviceId]
     );
     const serviceName = serviceRow[0].name;
-    
+
+    // Use joinedAt if provided, else NOW()
+    const joinTime = joinedAt || new Date();
+
+    // completedAt should be NOW() if leaving or served
+    const completeTime = (status === 'served' || status === 'left') ? new Date() : null;
+
     await db.execute(
-      `INSERT INTO history (email, serviceId, serviceName, status, joinedAt)
-      VALUES (?, ?, ?, ?, NOW())`,
-      [email, serviceId, serviceName, status]
+      `INSERT INTO history (email, serviceId, serviceName, status, joinedAt, completedAt)
+      VALUES (?, ?, ?, ?, ?, ?)`,
+      [email, serviceId, serviceName, status, joinTime, completeTime]
     );
   },
 
