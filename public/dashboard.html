@@ -172,9 +172,9 @@
     }
 
     // Render notifications
-    function renderNotifications() {
+    async function renderNotifications() {
     const container = document.getElementById('notifications-list');
-    const notifs = getUserNotifications(user.email, 5);
+    const notifs = await getUserNotifications(user.email, 5);
 
     if (notifs.length === 0) {
     container.innerHTML = `<div style="padding:2rem;text-align:center;color:#6b7280">No notifications yet</div>`;
@@ -191,7 +191,7 @@
     const colors = { success:'#10b981', info:'#3b82f6', warning:'#f59e0b', alert:'#ef4444' };
     notifEl.style.borderLeftColor = colors[notif.type] || '#3b82f6';
 
-    const time = new Date(notif.timestamp);
+    const time = new Date(notif.created_at);
     const timeStr = time.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
 
     const content = document.createElement('div');
@@ -207,12 +207,13 @@
     btn.textContent = '✕';
     btn.style.cssText = 'background:none;border:none;color:#9ca3af;cursor:pointer;font-size:1.25rem;padding:0;margin-left:1rem';
 
-   btn.addEventListener('click', (e) => {
-  e.preventDefault();
-  console.log('clicked notif', notif.id);  // ✅ should print every click
-  markNotificationRead(notif.id);
-  console.log('after mark, now rerendering');
-  renderNotifications();
+   btn.addEventListener('click', async (e) => {
+    e.preventDefault();
+    console.log('clicked notif', notif.id);  // ✅ should print every click
+    notifEl.remove();
+    await markNotificationRead(notif.id);
+    console.log('after mark, now rerendering');
+    await renderNotifications();
 });
 
 
@@ -227,14 +228,14 @@
     renderCurrentQueues();
     renderWaitTimesWidget();
     renderServices();
-    renderNotifications();
+    await renderNotifications();
 
     // Auto-refresh wait times every 30 seconds
-    setInterval(() => {
+    setInterval(async () => {
       renderWaitTimesWidget();
       renderCurrentQueues();
-      renderNotifications();
-    }, 30000);
+      await renderNotifications();
+    }, 5000);
 });
   </script>
 </body>
