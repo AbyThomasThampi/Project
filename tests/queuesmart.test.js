@@ -750,3 +750,62 @@ describe('Server Health & Routing', () => {
     expect(res.status).toBe(404);
   });
 });
+
+//
+
+describe('A4 Queue Validation + Persistence Fixes', () => {
+  test('join rejects invalid service id', async () => {
+    const res = await request(app)
+      .post('/api/queue/abc/join')
+      .set('x-user-email', 'student@tutor.com')
+      .send({ email: 'student@tutor.com' });
+
+    expect(res.status).toBe(400);
+  });
+
+  test('join rejects duplicate queue entry', async () => {
+    await request(app)
+      .post('/api/queue/1/join')
+      .set('x-user-email', 'student@tutor.com')
+      .send({ email: 'student@tutor.com' });
+
+    const res = await request(app)
+      .post('/api/queue/1/join')
+      .set('x-user-email', 'student@tutor.com')
+      .send({ email: 'student@tutor.com' });
+
+    expect(res.status).toBe(409);
+  });
+
+  test('serve returns 404 for unknown service', async () => {
+    const res = await request(app)
+      .post('/api/queue/999/serve')
+      .set('x-user-email', 'admin@tutor.com');
+
+    expect(res.status).toBe(404);
+  });
+
+  test('priority update returns 404 when user is not in queue', async () => {
+    const res = await request(app)
+      .patch('/api/queue/1/priority')
+      .set('x-user-email', 'admin@tutor.com')
+      .send({ email: 'missing@test.com', priority: 'high' });
+
+    expect(res.status).toBe(404);
+  });
+
+  test('queue view returns numeric estimated wait values', async () => {
+    await request(app)
+      .post('/api/queue/1/join')
+      .set('x-user-email', 'student@tutor.com')
+      .send({ email: 'student@tutor.com' });
+
+    const res = await request(app)
+      .get('/api/queue/1')
+      .set('x-user-email', 'admin@tutor.com');
+
+    expect(res.status).toBe(200);
+    expect(typeof res.body.queue[0].estimatedWait).toBe('number');
+    expect(typeof res.body.estimatedWaitForNext).toBe('number');
+  });
+});

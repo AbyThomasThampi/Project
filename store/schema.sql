@@ -1,7 +1,7 @@
 -- Database schema
 
 CREATE DATABASE IF NOT EXISTS queuesmart;
-USE queusmart;
+USE queuesmart;
 
 -- ── Users ───────────────────────────────────
 CREATE TABLE IF NOT EXISTS users (

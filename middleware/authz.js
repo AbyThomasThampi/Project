@@ -1,12 +1,10 @@
 const store = require('../store/dataStore');
 
-function getUserFromHeader(req) {
+async function getUserFromHeader(req) {
   const email = req.header('x-user-email');
-  if (!email) return null;
+  if (!email || typeof email !== 'string' || !email.trim()) return null;
 
-  return store.users.find(
-    user => user.email === String(email).trim().toLowerCase()
-  ) || null;
+  return await store.getUserByEmail(String(email).trim().toLowerCase());
 }
 
 function requireEmail(req, res, next) {
@@ -22,8 +20,8 @@ function requireEmail(req, res, next) {
   next();
 }
 
-function requireUser(req, res, next) {
-  const user = getUserFromHeader(req);
+async function requireUser(req, res, next) {
+  const user = await getUserFromHeader(req);
 
   if (!user) {
     return res.status(401).json({
@@ -32,11 +30,12 @@ function requireUser(req, res, next) {
     });
   }
 
+  req.user = user;
   next();
 }
 
-function requireAdmin(req, res, next) {
-  const user = getUserFromHeader(req);
+async function requireAdmin(req, res, next) {
+  const user = await getUserFromHeader(req);
 
   if (!user) {
     return res.status(401).json({
@@ -52,6 +51,7 @@ function requireAdmin(req, res, next) {
     });
   }
 
+  req.user = user;
   next();
 }
 

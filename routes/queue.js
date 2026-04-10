@@ -1,87 +1,66 @@
 // routes/queue.js
-// Queue Management Module + Wait-Time Estimation Logic
 const { requireEmail, requireAdmin } = require('../middleware/authz');
 const express = require('express');
 const router  = express.Router();
 const store   = require('../store/dataStore');
 const { createNotification } = require('./notifications');
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
-
-/**
- * Calculate estimated wait time for a given position.
- * Rule-based: position × service.expectedDuration (minutes).
- * Position is 1-indexed.
- */
+// Calculate estimated wait time for a given position
 async function calculateWait(serviceId, position) {
   const service = await store.getServiceById(serviceId);
   const duration = service ? service.expectedDuration : 30;
   return position * duration;
 }
 
-/**
- * Ensure queue array exists for a service.
- */
-//function ensureQueue(serviceId) {
-//  if (!store.queues[serviceId]) store.queues[serviceId] = [];
-//}
-
-// ── GET /api/queue/:serviceId ─────────────────────────────────────────────────
-// View current queue for a service
+// GET /api/queue/:serviceId
 router.get('/:serviceId', requireEmail, async (req, res) => {
   const serviceId = parseInt(req.params.serviceId, 10);
   const service   = await store.getServiceById(serviceId);
-  
+
   if (!service) {
     return res.status(404).json({ success: false, errors: ['Service not found'] });
   }
 
-  // ensureQueue(serviceId);
-  
   const queue = await store.getQueue(serviceId);
 
-  // Annotate each entry with its live position and estimated wait
-  const annotated = queue.map((entry, idx) => ({
-    ...entry,
-    position:    idx + 1,
-    estimatedWait: calculateWait(serviceId, idx + 1)
-  }));
+  const annotated = await Promise.all(
+    queue.map(async (entry, idx) => ({
+      ...entry,
+      position: idx + 1,
+      estimatedWait: await calculateWait(serviceId, idx + 1)
+    }))
+  );
 
   return res.status(200).json({
     success: true,
     serviceId,
     serviceName: service.name,
     queueLength: queue.length,
-    estimatedWaitForNext: calculateWait(serviceId, queue.length + 1),
+    estimatedWaitForNext: await calculateWait(serviceId, queue.length + 1),
     queue: annotated
   });
 });
 
-// ── POST /api/queue/:serviceId/join ───────────────────────────────────────────
-// User joins a queue
-// Body: { email }
+// POST /api/queue/:serviceId/join
 router.post('/:serviceId/join', requireEmail, async (req, res) => {
   const serviceId = parseInt(req.params.serviceId, 10);
   const { email } = req.body;
 
-  // Validations
+  if (!Number.isInteger(serviceId) || serviceId <= 0) {
+    return res.status(400).json({ success: false, errors: ['Invalid serviceId'] });
+  }
+
   if (!email || typeof email !== 'string' || email.trim() === '') {
     return res.status(400).json({ success: false, errors: ["'email' is required"] });
   }
+
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
     return res.status(400).json({ success: false, errors: ['Invalid email format'] });
   }
 
-  //const service = store.services.find(s => s.id === serviceId);
-  //if (!service) {
-  //  return res.status(404).json({ success: false, errors: ['Service not found'] });
-  //}
-
-  //ensureQueue(serviceId);
-  
-  
   const normalEmail = email.trim().toLowerCase();
   const service = await store.getServiceById(serviceId);
+
   if (!service) {
     return res.status(404).json({ success: false, errors: ['Service not found'] });
   }
@@ -93,18 +72,10 @@ router.post('/:serviceId/join', requireEmail, async (req, res) => {
 
   await store.joinQueue(serviceId, { email: normalEmail, priority: 'medium' });
 
-  //const entry = {
-  //  email:    normalEmail,
-  //  joinedAt: new Date().toISOString(),
-  //  priority: 'medium'
-  //};
-  //queue.push(entry);
-
   const position = queue.length + 1;
-  const wait     = await calculateWait(serviceId, position);
+  const wait = await calculateWait(serviceId, position);
 
-  // Trigger join notification
-  createNotification(
+  await createNotification(
     normalEmail,
     'success',
     `Joined ${service.name}`,
@@ -120,12 +91,14 @@ router.post('/:serviceId/join', requireEmail, async (req, res) => {
   });
 });
 
-// ── DELETE /api/queue/:serviceId/leave ────────────────────────────────────────
-// User leaves a queue
-// Body: { email }
+// DELETE /api/queue/:serviceId/leave
 router.delete('/:serviceId/leave', requireEmail, async (req, res) => {
-  const serviceId   = parseInt(req.params.serviceId, 10);
-  const { email }   = req.body;
+  const serviceId = parseInt(req.params.serviceId, 10);
+  const { email } = req.body;
+
+  if (!Number.isInteger(serviceId) || serviceId <= 0) {
+    return res.status(400).json({ success: false, errors: ['Invalid serviceId'] });
+  }
 
   if (!email) {
     return res.status(400).json({ success: false, errors: ["'email' is required"] });
@@ -133,17 +106,18 @@ router.delete('/:serviceId/leave', requireEmail, async (req, res) => {
 
   const normalEmail = email.trim().toLowerCase();
   const service = await store.getServiceById(serviceId);
+
   if (!service) {
     return res.status(404).json({ success: false, errors: ['Service not found'] });
   }
 
-  //ensureQueue(serviceId);
   const queue = await store.getQueue(serviceId);
   const found = queue.find(e => e.email === normalEmail);
 
-  if (!found) return res.status(404).json({ success: false, errors: ['User not found in this queue'] });
+  if (!found) {
+    return res.status(404).json({ success: false, errors: ['User not found in this queue'] });
+  }
 
-  // Record history as 'left'
   await store.addHistory({
     email: normalEmail,
     serviceId,
@@ -155,38 +129,38 @@ router.delete('/:serviceId/leave', requireEmail, async (req, res) => {
   return res.status(200).json({ success: true, message: 'Left the queue' });
 });
 
-// ── POST /api/queue/:serviceId/serve ─────────────────────────────────────────
-// Admin: serve the next user in queue
-router.post('/:serviceId/serve',requireAdmin, async (req, res) => {
+// POST /api/queue/:serviceId/serve
+router.post('/:serviceId/serve', requireAdmin, async (req, res) => {
   const serviceId = parseInt(req.params.serviceId, 10);
-  const service   = store.services.find(s => s.id === serviceId);
+  const service = await store.getServiceById(serviceId);
+
   if (!service) {
     return res.status(404).json({ success: false, errors: ['Service not found'] });
   }
 
-  const queue = await store.getQueue(serviceId);  
+  const queue = await store.getQueue(serviceId);
   if (queue.length === 0) {
     return res.status(400).json({ success: false, errors: ['Queue is empty'] });
   }
 
-  const served = await store.serveNext(serviceId);   // Remove first entry
+  const served = await store.serveNext(serviceId);
 
-  // Record completion
   await store.addHistory({
     email: served.email,
     serviceId,
     status: 'served'
   });
-  
-  // Notify the remaining queue that they've moved up
+
   const remainingQueue = await store.getQueue(serviceId);
   for (let i = 0; i < remainingQueue.length; i++) {
     const entry = remainingQueue[i];
-    createNotification(
+    const wait = await calculateWait(serviceId, i + 1);
+
+    await createNotification(
       entry.email,
       'info',
       `Queue update - ${service.name}`,
-      `You moved to position #${i + 1}. Estimated wait: ${await calculateWait(serviceId, i + 1)} minutes`,
+      `You moved to position #${i + 1}. Estimated wait: ${wait} minutes`,
       serviceId
     );
   }
@@ -199,52 +173,92 @@ router.post('/:serviceId/serve',requireAdmin, async (req, res) => {
   });
 });
 
-// ── PATCH /api/queue/:serviceId/priority ─────────────────────────────────────
-// Admin: change a user's priority
-// Body: { email, priority }
-router.patch('/:serviceId/priority',requireAdmin, async (req, res) => {
+// PATCH /api/queue/:serviceId/priority
+router.patch('/:serviceId/priority', requireAdmin, async (req, res) => {
   const serviceId = parseInt(req.params.serviceId, 10);
   const { email, priority } = req.body;
 
   const validPriorities = ['low', 'medium', 'high'];
-  if (!email)    return res.status(400).json({ success: false, errors: ["'email' is required"] });
-  if (!priority || !validPriorities.includes(priority)) {
-    return res.status(400).json({ success: false, errors: [`priority must be one of: ${validPriorities.join(', ')}`] });
+
+  if (!Number.isInteger(serviceId) || serviceId <= 0) {
+    return res.status(400).json({ success: false, errors: ['Invalid serviceId'] });
   }
 
-  await store.updateQueuePriority(serviceId, email.trim().toLowerCase(), priority);
+  if (!email) {
+    return res.status(400).json({ success: false, errors: ["'email' is required"] });
+  }
 
-  return res.status(200).json({ success: true, message: `Priority updated to ${priority}`, entry });
+  if (!priority || !validPriorities.includes(priority)) {
+    return res.status(400).json({
+      success: false,
+      errors: [`priority must be one of: ${validPriorities.join(', ')}`]
+    });
+  }
+
+  const service = await store.getServiceById(serviceId);
+  if (!service) {
+    return res.status(404).json({ success: false, errors: ['Service not found'] });
+  }
+
+  const normalizedEmail = email.trim().toLowerCase();
+  const queue = await store.getQueue(serviceId);
+  const existing = queue.find(entry => entry.email === normalizedEmail);
+
+  if (!existing) {
+    return res.status(404).json({ success: false, errors: ['User not found in this queue'] });
+  }
+
+  await store.updateQueuePriority(serviceId, normalizedEmail, priority);
+
+  return res.status(200).json({
+    success: true,
+    message: `Priority updated to ${priority}`,
+    entry: {
+      ...existing,
+      priority
+    }
+  });
 });
 
-// ── PATCH /api/queue/:serviceId/reorder ──────────────────────────────────────
-// Admin: move an entry from one index to another
-// Body: { fromIndex, toIndex }
+// PATCH /api/queue/:serviceId/reorder
 router.patch('/:serviceId/reorder', requireAdmin, async (req, res) => {
   const serviceId = parseInt(req.params.serviceId, 10);
   const { fromIndex, toIndex } = req.body;
 
+  const service = await store.getServiceById(serviceId);
+  if (!service) {
+    return res.status(404).json({ success: false, errors: ['Service not found'] });
+  }
+
   const queue = await store.getQueue(serviceId);
+
   if (fromIndex === undefined || toIndex === undefined) {
     return res.status(400).json({ success: false, errors: ["'fromIndex' and 'toIndex' are required"] });
   }
+
   if (fromIndex < 0 || fromIndex >= queue.length || toIndex < 0 || toIndex >= queue.length) {
     return res.status(400).json({ success: false, errors: ['Index out of bounds'] });
   }
 
-  // Simple in-memory swap; DB persistence requires position column (future A4)
-  const [moved] = queue.splice(fromIndex, 1);
-  queue.splice(toIndex, 0, moved);
+  const reordered = [...queue];
+  const [moved] = reordered.splice(fromIndex, 1);
+  reordered.splice(toIndex, 0, moved);
 
-  return res.status(200).json({ success: true, message: 'Queue reordered', queue });
+  return res.status(200).json({
+    success: true,
+    message: 'Queue reordered',
+    queue: reordered
+  });
 });
 
-// ── GET /api/queue/:serviceId/wait ────────────────────────────────────────────
-// Wait-time estimate for the next person joining
+// GET /api/queue/:serviceId/wait
 router.get('/:serviceId/wait', requireEmail, async (req, res) => {
   const serviceId = parseInt(req.params.serviceId, 10);
   const service = await store.getServiceById(serviceId);
-  if (!service) return res.status(404).json({ success: false, errors: ['Service not found'] });
+
+  if (!service) {
+    return res.status(404).json({ success: false, errors: ['Service not found'] });
+  }
 
   const queue = await store.getQueue(serviceId);
   const wait = await calculateWait(serviceId, queue.length + 1);
@@ -257,26 +271,4 @@ router.get('/:serviceId/wait', requireEmail, async (req, res) => {
   });
 });
 
-// ── Internal helper: record history entry ────────────────────────────────────
-// function recordHistory(serviceId, userEmail, joinedAt, status) {
-//   const service = store.services.find(s => s.id === serviceId);
-  
-//   const entry = {
-//     id:               store.nextHistoryId(),
-//     serviceId,
-//     serviceName:      service ? service.name : 'Unknown Service',
-//     userEmail:        userEmail.toLowerCase(),
-//     joinedAt,
-//     completedAt:      new Date().toISOString(),
-//     status,                    // "served" or "left"
-//     waitTimeMinutes:  Math.floor((Date.now() - new Date(joinedAt)) / 60000)
-//   };
-
-//   store.history.push(entry);
-//   console.log(`✅ History recorded: ${userEmail} - ${status} for ${service ? service.name : 'service ' + serviceId}`);
-  
-//   return entry;
-// }
-
 module.exports = router;
-//module.exports.calculateWait = calculateWait;
