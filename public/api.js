@@ -310,54 +310,102 @@ async function refreshAllQueues() {
 // ═══════════════════════════════════════════════════════════════════════════════
 // SERVICES (used by admin-services.html)
 // ═══════════════════════════════════════════════════════════════════════════════
-async function createService(name, description, expectedDuration, priority) {
-  const res  = await fetch(`${API_BASE}/services`, {
-    method:  'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body:    JSON.stringify({ name, description, expectedDuration, priority })
-  });
-  const data = await res.json();
-  if (data.success) {
-    services.push(data.service);
-    queues[data.service.id] = [];
-    showToast('Service created', 'success');
-  } else {
-    showToast(data.errors?.[0] || 'Failed to create service', 'error');
+async function createService(name, description, expectedDuration, priority = 'medium') {
+  try {
+    const res = await fetch(`${API_BASE}/services`, {
+      method: 'POST',
+      headers: getAuthHeaders(true),           // Sends x-user-email for admin check
+      body: JSON.stringify({
+        name: name.trim(),
+        description: description.trim(),
+        expectedDuration: parseInt(expectedDuration),
+        priority: priority
+      })
+    });
+
+    const data = await res.json();
+
+    if (data.success) {
+      services.push(data.service);           // Update local cache
+      queues[data.service.id] = [];          // Initialize empty queue
+      showToast(`Service "${data.service.name}" created successfully`, 'success');
+      return { success: true, service: data.service };
+    } else {
+      showToast(data.errors?.[0] || 'Failed to create service', 'error');
+      return { success: false, errors: data.errors };
+    }
+  } catch (err) {
+    console.error("Create service error:", err);
+    showToast("Network error while creating service", 'error');
+    return { success: false, errors: ["Network error"] };
   }
-  return data;
 }
 
-async function updateService(id, patch) {
-  const res  = await fetch(`${API_BASE}/services/${id}`, {
-    method:  'PUT',
-    headers: { 'Content-Type': 'application/json' },
-    body:    JSON.stringify(patch)
-  });
-  const data = await res.json();
-  if (data.success) {
-    const idx = services.findIndex(s => s.id === id);
-    if (idx !== -1) services[idx] = data.service;
-    showToast('Service updated', 'success');
-  } else {
-    showToast(data.errors?.[0] || 'Failed to update service', 'error');
+/**
+ * Update an existing service
+ */
+async function updateService(id, updates) {
+  try {
+    const res = await fetch(`${API_BASE}/services/${id}`, {
+      method: 'PUT',
+      headers: getAuthHeaders(true),
+      body: JSON.stringify(updates)
+    });
+
+    const data = await res.json();
+
+    if (data.success) {
+      // Update local services array
+      const idx = services.findIndex(s => s.id === id);
+      if (idx !== -1) {
+        services[idx] = data.service;
+      }
+      showToast(`Service "${data.service.name}" updated successfully`, 'success');
+      return { success: true, service: data.service };
+    } else {
+      showToast(data.errors?.[0] || 'Failed to update service', 'error');
+      return { success: false, errors: data.errors };
+    }
+  } catch (err) {
+    console.error("Update service error:", err);
+    showToast("Network error while updating service", 'error');
+    return { success: false, errors: ["Network error"] };
   }
-  return data;
 }
 
+/**
+ * Delete a service and its queue
+ */
 async function deleteService(id) {
-  if (!confirm('Delete this service and its queue?')) return;
-  const res  = await fetch(`${API_BASE}/services/${id}`, { method: 'DELETE' });
-  const data = await res.json();
-  if (data.success) {
-    services = services.filter(s => s.id !== id);
-    delete queues[id];
-    showToast('Service deleted', 'success');
-  } else {
-    showToast(data.errors?.[0] || 'Failed to delete service', 'error');
+  if (!confirm('Delete this service and its entire queue? This cannot be undone.')) {
+    return { success: false };
   }
-  return data;
-}
 
+  try {
+    const res = await fetch(`${API_BASE}/services/${id}`, {
+      method: 'DELETE',
+      headers: getAuthHeaders(false)        // No JSON body needed for DELETE
+    });
+
+    const data = await res.json();
+
+    if (data.success) {
+      // Remove from local cache
+      services = services.filter(s => s.id !== id);
+      delete queues[id];
+      
+      showToast('Service deleted successfully', 'success');
+      return { success: true };
+    } else {
+      showToast(data.errors?.[0] || 'Failed to delete service', 'error');
+      return { success: false, errors: data.errors };
+    }
+  } catch (err) {
+    console.error("Delete service error:", err);
+    showToast("Network error while deleting service", 'error');
+    return { success: false, errors: ["Network error"] };
+  }
+}
 // ═══════════════════════════════════════════════════════════════════════════════
 // NOTIFICATIONS
 // ═══════════════════════════════════════════════════════════════════════════════
