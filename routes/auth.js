@@ -1,50 +1,42 @@
-// routes/auth.js
-// Authentication module: registration, login, role handling
-
 const express = require('express');
+const bcrypt = require('bcryptjs');
 const router  = express.Router();
 const store   = require('../store/dataStore');
 const { validateEmail, validatePassword } = require('../middleware/validate');
 
-// ── POST /api/auth/register ──────────────────────────────────────────────────
-// Body: { email, password, role? }   role defaults to 'user'
+// POST /api/auth/register
 router.post('/register', async (req, res) => {
   const { email, password, role } = req.body;
   const errors = [];
 
-  // Required-field checks
-  if (!email)    errors.push("'email' is required");
+  if (!email) errors.push("'email' is required");
   if (!password) errors.push("'password' is required");
   if (errors.length) return res.status(400).json({ success: false, errors });
 
-  // Format / length checks
   const emailErr = validateEmail(email);
   if (emailErr) errors.push(emailErr);
 
   const passErr = validatePassword(password);
   if (passErr) errors.push(passErr);
 
-  // Role validation
   const allowedRoles = ['user', 'admin'];
   const assignedRole = role && allowedRoles.includes(role) ? role : 'user';
 
   if (errors.length) return res.status(400).json({ success: false, errors });
 
-  // Duplicate check
   const normalEmail = email.trim().toLowerCase();
   const existingUser = await store.getUserByEmail(normalEmail);
   if (existingUser) {
     return res.status(409).json({ success: false, errors: ['Email already registered'] });
   }
 
-  // Create user
+  const hashedPassword = await bcrypt.hash(password, 10);
+
   const newUser = await store.addUser({
-    //id:       store.nextUserId(),
-    email:    normalEmail,
-    password,           // plain-text for A3; hash in A4+
-    role:     assignedRole
+    email: normalEmail,
+    password: hashedPassword,
+    role: assignedRole
   });
-  //store.users.push(newUser);
 
   return res.status(201).json({
     success: true,
@@ -53,13 +45,12 @@ router.post('/register', async (req, res) => {
   });
 });
 
-// ── POST /api/auth/login ─────────────────────────────────────────────────────
-// Body: { email, password }
+// POST /api/auth/login
 router.post('/login', async (req, res) => {
   const { email, password } = req.body;
   const errors = [];
 
-  if (!email)    errors.push("'email' is required");
+  if (!email) errors.push("'email' is required");
   if (!password) errors.push("'password' is required");
   if (errors.length) return res.status(400).json({ success: false, errors });
 
@@ -67,9 +58,15 @@ router.post('/login', async (req, res) => {
   if (emailErr) return res.status(400).json({ success: false, errors: [emailErr] });
 
   const normalEmail = email.trim().toLowerCase();
-  const user = await store.getUserByEmail(normalEmail); 
-  
-  if (!user || user.password !== password) {
+  const user = await store.getUserByEmail(normalEmail);
+
+  if (!user) {
+    return res.status(401).json({ success: false, errors: ['Invalid email or password'] });
+  }
+
+  const passwordMatches = await bcrypt.compare(password, user.password);
+
+  if (!passwordMatches) {
     return res.status(401).json({ success: false, errors: ['Invalid email or password'] });
   }
 
@@ -80,13 +77,12 @@ router.post('/login', async (req, res) => {
   });
 });
 
-// ── GET /api/auth/users ──────────────────────────────────────────────────────
-// Returns all users (admin use; passwords stripped)
+// GET /api/auth/users
 router.get('/users', async (req, res) => {
-  const users = await store.getUsers();
-  
-  const safeUsers = users.map(({ password, ...u}) => u);
-  
+  const users = await store.listUsers();
+
+  const safeUsers = users.map(({ password, ...u }) => u);
+
   return res.status(200).json({ success: true, users: safeUsers });
 });
 
