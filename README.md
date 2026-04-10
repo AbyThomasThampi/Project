@@ -1,10 +1,10 @@
-# QueueSmart – Backend (Assignment 3)
+# QueueSmart – Backend (Assignment 4)
 
 ## Tech Stack
 - **Runtime:** Node.js
 - **Framework:** Express.js
 - **Testing:** Jest + Supertest
-- **Data storage:** In-memory (localStorage replaced; persistent DB in A4)
+- **Database:** MySQL (persistent storage via mysql2)
 
 ---
 
@@ -23,7 +23,9 @@ queuesmart-backend/
 ├── middleware/
 │   └── validate.js            ← Field validation helpers
 ├── store/
-│   └── dataStore.js           ← In-memory data (resets on restart)
+│   ├── dataStore.js           ← MySQL data access layer(users, queue, services, notifications, history)
+│   ├── db.js                  ← MySQL connection pool
+│   └── schema.sql             ← MySQL database schema (tables + setup) 
 ├── tests/
 │   └── queuesmart.test.js     ← Jest unit tests (70–80% coverage target)
 └── public/
@@ -39,14 +41,19 @@ queuesmart-backend/
 # 1. Install dependencies
 npm install
 
-# 2. Start the server (port 3000)
+# 2. Setup MySQL database
+# - Install MySQL locally if not already installed
+# - Run the schema file:
+mysql -u root -p < store/schema.sql
+
+# 3. Start the server (port 3000)
 npm start
 
-# 3. Open the frontend
+# 4. Open the frontend
 #    Copy all A2 HTML/CSS files into the public/ folder, then visit:
 #    http://localhost:3000
 
-# 4. Run tests
+# 5. Run tests
 npm test
 ```
 
