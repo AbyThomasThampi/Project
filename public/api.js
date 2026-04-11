@@ -6,7 +6,7 @@
 // with:
 //   <script src="api.js"></script>
 
-const API_BASE = 'http://localhost:3000/api';
+const API_BASE = window.location.origin + '/api';
 const CURRENT_USER_KEY = 'currentUser';
 
 // ── In-memory cache (populated from backend on loadData) ─────────────────────
