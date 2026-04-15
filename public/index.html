@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>QueueSmart Tutor – Sign In</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+  <!-- AUTH LOADING OVERLAY -->
+  <div id="auth-overlay" class="auth-overlay" aria-hidden="true">
+    <div class="auth-overlay__card">
+      <div class="auth-overlay__logo">QueueSmart Tutor</div>
+
+      <div class="auth-spinner">
+        <svg class="auth-spinner__ring" viewBox="0 0 56 56" fill="none">
+          <circle cx="28" cy="28" r="22" stroke="#e5e7eb" stroke-width="4"/>
+          <circle class="auth-spinner__arc" cx="28" cy="28" r="22"
+                  stroke="url(#spinGrad)" stroke-width="4"
+                  stroke-linecap="round" stroke-dasharray="138" stroke-dashoffset="100"/>
+          <defs>
+            <linearGradient id="spinGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stop-color="#3b82f6"/>
+              <stop offset="100%" stop-color="#6366f1"/>
+            </linearGradient>
+          </defs>
+        </svg>
+        <div class="auth-spinner__check" id="auth-check">
+          <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="20 6 9 17 4 12"/>
+          </svg>
+        </div>
+      </div>
+
+      <div class="auth-overlay__steps">
+        <div class="auth-step" id="step-verify">
+          <span class="auth-step__dot"></span>
+          <span class="auth-step__label">Verifying credentials</span>
+        </div>
+        <div class="auth-step" id="step-load">
+          <span class="auth-step__dot"></span>
+          <span class="auth-step__label">Loading your profile</span>
+        </div>
+        <div class="auth-step" id="step-ready">
+          <span class="auth-step__dot"></span>
+          <span class="auth-step__label">Preparing dashboard</span>
+        </div>
+      </div>
+
+      <div class="auth-overlay__status" id="auth-status-msg">Authenticating...</div>
+    </div>
+  </div>
+  <!-- END OVERLAY -->
+
+  <div class="container" id="login-container">
+    <div class="form-container">
+      <div class="form-header">
+        <h1>QueueSmart Tutor</h1>
+        <p>Sign in to join the queue</p>
+      </div>
+
+      <form id="login-form" class="form-box" autocomplete="on">
+        <div class="input-group">
+          <input type="email" id="email" class="input-field" placeholder=" " required autocomplete="email"/>
+          <label for="email" class="floating-label">Email address</label>
+        </div>
+
+        <div class="input-group password-group">
+          <input type="password" id="password" class="input-field" placeholder=" " required autocomplete="current-password"/>
+          <label for="password" class="floating-label">Password</label>
+          <button type="button" class="toggle-password" aria-label="Toggle password visibility">Show</button>
+        </div>
+
+        <button type="submit" class="form-btn form-btn--submit" id="signin-btn">Sign In</button>
+      </form>
+
+      <div class="form-bottom">
+        <p>Don't have an account? <a href="signup.html" class="form-link">Sign up</a></p>
+      </div>
+
+      <div class="demo-note">
+        <small>Demo accounts:<br>
+        <small>Demo accounts:<br>
+          Student: <strong>student@tutor.com</strong> / student123<br>
+          Admin: <strong>admin@tutor.com</strong> / admin123
+        </small>
+        </small>
+      </div>
+    </div>
+  </div>
+
+  <script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script src="api.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', function () {
+
+      // Password toggle
+      document.querySelectorAll('.toggle-password').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const input = btn.parentElement.querySelector('input');
+          if (input.type === 'password') { input.type = 'text'; btn.textContent = 'Hide'; }
+          else { input.type = 'password'; btn.textContent = 'Show'; }
+        });
+      });
+
+      // Step helpers
+      function setStep(stepId, state) {
+        const el = document.getElementById(stepId);
+        el.classList.remove('auth-step--active', 'auth-step--done');
+        if (state) el.classList.add('auth-step--' + state);
+      }
+
+      function setStatusMsg(msg) {
+        document.getElementById('auth-status-msg').textContent = msg;
+      }
+
+      function showOverlay() {
+        document.getElementById('auth-overlay').classList.add('auth-overlay--visible');
+      }
+
+      function runAuthAnimation(redirectUrl) {
+        showOverlay();
+
+        setStep('step-verify', 'active');
+        setStatusMsg('Verifying credentials...');
+
+        setTimeout(() => {
+          setStep('step-verify', 'done');
+          setStep('step-load', 'active');
+          setStatusMsg('Loading your profile...');
+        }, 700);
+
+        setTimeout(() => {
+          setStep('step-load', 'done');
+          setStep('step-ready', 'active');
+          setStatusMsg('Preparing your dashboard...');
+        }, 1400);
+
+        setTimeout(() => {
+          setStep('step-ready', 'done');
+          setStatusMsg('Access granted!');
+          document.querySelector('.auth-spinner__ring').style.display = 'none';
+          document.getElementById('auth-check').classList.add('auth-check--visible');
+        }, 2100);
+
+        setTimeout(() => {
+          window.location.href = redirectUrl;
+        }, 2750);
+      }
+
+      // Login form — calls backend API
+      document.getElementById('login-form').addEventListener('submit', async function (e) {
+        e.preventDefault();
+
+        const email    = document.getElementById('email').value.trim().toLowerCase();
+        const password = document.getElementById('password').value;
+
+        if (!email || !password) { showToast('Please fill all fields', 'error'); return; }
+        if (!isValidEmail(email)) { showToast('Invalid email format', 'error'); return; }
+
+        document.getElementById('signin-btn').disabled = true;
+
+        const data = await handleLoginAPI(email, password);
+
+        if (data.success) {
+          const redirectUrl = data.user.role === 'admin' ? 'admin-dashboard.html' : 'dashboard.html';
+          runAuthAnimation(redirectUrl);
+        } else {
+          document.getElementById('signin-btn').disabled = false;
+          showToast(data.errors?.[0] || 'Invalid email or password', 'error');
+        }
+      });
+    });
+  </script>
+</body>
+</html>
